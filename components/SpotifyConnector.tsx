@@ -9,7 +9,7 @@ import { View, Text, Pressable, ActivityIndicator, Image, ScrollView } from "rea
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import {
-    SPOTIFY_CLIENT_ID,
+    getSpotifyClientId,
     SPOTIFY_SCOPES,
     spotifyDiscovery,
     createTokens,
@@ -63,7 +63,7 @@ export default function SpotifyConnector({
 
     // 生成 Redirect URI - Expo Go 需要使用特定格式
     const redirectUri = AuthSession.makeRedirectUri({
-        native: "exp://192.168.3.209:8082",
+        scheme: "vibe-consensus",
     });
 
     // 调试：打印实际的 Redirect URI
@@ -74,9 +74,10 @@ export default function SpotifyConnector({
     }, [redirectUri]);
 
     // OAuth 请求配置
+    const clientId = getSpotifyClientId();
     const [request, response, promptAsync] = AuthSession.useAuthRequest(
         {
-            clientId: SPOTIFY_CLIENT_ID,
+            clientId,
             scopes: SPOTIFY_SCOPES,
             usePKCE: true,
             redirectUri,
@@ -104,7 +105,7 @@ export default function SpotifyConnector({
 
             const tokenResponse = await AuthSession.exchangeCodeAsync(
                 {
-                    clientId: SPOTIFY_CLIENT_ID,
+                    clientId: getSpotifyClientId(),
                     code,
                     redirectUri,
                     extraParams: {
