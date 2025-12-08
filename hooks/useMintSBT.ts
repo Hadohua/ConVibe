@@ -1,8 +1,12 @@
 /**
- * hooks/useMintSBT.ts - SBT 铸造 Hook
+ * hooks/useMintSBT.ts - SBT 铸造 Hook V2
  * 
- * 使用 Privy 嵌入式钱包调用 MusicConsensusSBT 合约铸造徽章
- * 使用 encodeFunctionData + Privy sendTransaction 方式
+ * 使用 Privy 嵌入式钱包调用 MusicConsensusSBT 合约铸造分层徽章
+ * 
+ * V2 新增：
+ * - 支持 mintTieredBadge (带等级参数)
+ * - 支持 refreshBadge (刷新验证)
+ * - 返回徽章详细信息包含等级和状态
  */
 
 import { useState, useCallback } from "react";
@@ -13,7 +17,8 @@ import {
     MUSIC_CONSENSUS_SBT_ADDRESS,
     FAUCET_URL,
 } from "../lib/web3/client";
-import { MusicConsensusSBTAbi, getGenreIds } from "../lib/web3/abi";
+import { MusicConsensusSBTAbi, getGenreIds, TIER } from "../lib/web3/abi";
+import type { TierLevel } from "../lib/consensus/tier-calculator";
 
 // ============================================
 // 类型定义
@@ -32,6 +37,16 @@ export interface MintResult {
     txHash?: string;
     error?: string;
     mintedGenres?: number[];
+    mintedTiers?: number[];
+}
+
+/** 徽章详细信息 */
+export interface BadgeDetails {
+    genreId: number;
+    tier: number;
+    isActive: boolean;
+    lastVerified: number;
+    isExpired: boolean;
 }
 
 export interface UseMintSBTReturn {
@@ -40,9 +55,12 @@ export interface UseMintSBTReturn {
     error: string | null;
     mintedGenres: number[];
     faucetUrl: string;
-    mint: (genres: string[]) => Promise<MintResult>;
+    mint: (genres: string[], tier?: TierLevel) => Promise<MintResult>;
+    mintTiered: (genreIds: number[], tiers: number[]) => Promise<MintResult>;
+    refreshBadge: (genreId: number, newTier: TierLevel) => Promise<MintResult>;
     checkBalance: () => Promise<string>;
     getUserBadges: () => Promise<number[]>;
+    getUserBadgesWithDetails: () => Promise<BadgeDetails[]>;
     reset: () => void;
 }
 
@@ -84,7 +102,7 @@ export function useMintSBT(): UseMintSBTReturn {
     }, [wallet.account?.address]);
 
     /**
-     * 获取用户已有的徽章
+     * 获取用户已有的徽章 (简单版本)
      */
     const getUserBadges = useCallback(async (): Promise<number[]> => {
         if (!wallet.account?.address) {
@@ -99,7 +117,7 @@ export function useMintSBT(): UseMintSBTReturn {
                 args: [wallet.account.address as `0x${string}`],
             });
 
-            return badges as number[];
+            return (badges as bigint[]).map(id => Number(id));
         } catch (err) {
             console.error("获取徽章失败:", err);
             return [];
@@ -107,18 +125,95 @@ export function useMintSBT(): UseMintSBTReturn {
     }, [wallet.account?.address]);
 
     /**
-     * 铸造 SBT 徽章
+     * 获取用户徽章详细信息 (V2)
      */
-    const mint = useCallback(
-        async (genres: string[]): Promise<MintResult> => {
+    const getUserBadgesWithDetails = useCallback(async (): Promise<BadgeDetails[]> => {
+        if (!wallet.account?.address) {
+            return [];
+        }
+
+        try {
+            const result = await publicClient.readContract({
+                address: MUSIC_CONSENSUS_SBT_ADDRESS,
+                abi: MusicConsensusSBTAbi,
+                functionName: "getActiveBadgesWithInfo",
+                args: [wallet.account.address as `0x${string}`],
+            });
+
+            const [genreIds, tiers, isActives] = result as [bigint[], number[], boolean[]];
+
+            const details: BadgeDetails[] = [];
+
+            for (let i = 0; i < genreIds.length; i++) {
+                const genreId = Number(genreIds[i]);
+
+                // 获取更多详情
+                const info = await publicClient.readContract({
+                    address: MUSIC_CONSENSUS_SBT_ADDRESS,
+                    abi: MusicConsensusSBTAbi,
+                    functionName: "getBadgeInfo",
+                    args: [wallet.account.address as `0x${string}`, BigInt(genreId)],
+                });
+
+                const [tier, lastVerified, , isExpired] = info as [number, bigint, number, boolean];
+
+                details.push({
+                    genreId,
+                    tier: tiers[i],
+                    isActive: isActives[i],
+                    lastVerified: Number(lastVerified),
+                    isExpired,
+                });
+            }
+
+            return details;
+        } catch (err) {
+            console.error("获取徽章详情失败:", err);
+            return [];
+        }
+    }, [wallet.account?.address]);
+
+    /**
+     * 切换到 Base Sepolia 网络
+     */
+    const ensureNetwork = useCallback(async (provider: any) => {
+        try {
+            await provider.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: "0x14a34" }], // 84532 in hex
+            });
+        } catch (switchError: any) {
+            if (switchError.code === 4902) {
+                await provider.request({
+                    method: "wallet_addEthereumChain",
+                    params: [{
+                        chainId: "0x14a34",
+                        chainName: "Base Sepolia",
+                        nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+                        rpcUrls: ["https://sepolia.base.org"],
+                        blockExplorerUrls: ["https://sepolia.basescan.org"],
+                    }],
+                });
+            }
+        }
+    }, []);
+
+    /**
+     * 铸造分层 SBT 徽章 (V2 核心函数)
+     */
+    const mintTiered = useCallback(
+        async (genreIds: number[], tiers: number[]): Promise<MintResult> => {
             try {
-                // 检查钱包状态
                 if (!wallet.account?.address) {
                     throw new Error("钱包未连接");
                 }
 
                 if (wallet.status !== "connected") {
                     throw new Error("钱包未就绪");
+                }
+
+                if (genreIds.length !== tiers.length) {
+                    throw new Error("流派和等级数组长度不匹配");
                 }
 
                 setStatus("checking");
@@ -138,16 +233,17 @@ export function useMintSBT(): UseMintSBTReturn {
                     };
                 }
 
-                // 转换流派为 ID
-                const genreIds = getGenreIds(genres);
-
-                if (genreIds.length === 0) {
-                    throw new Error("没有可铸造的流派");
-                }
-
                 // 检查哪些徽章还没有
                 const existingBadges = await getUserBadges();
-                const newGenreIds = genreIds.filter((id) => !existingBadges.includes(id));
+                const newGenreIds: number[] = [];
+                const newTiers: number[] = [];
+
+                for (let i = 0; i < genreIds.length; i++) {
+                    if (!existingBadges.includes(genreIds[i])) {
+                        newGenreIds.push(genreIds[i]);
+                        newTiers.push(tiers[i]);
+                    }
+                }
 
                 if (newGenreIds.length === 0) {
                     setStatus("success");
@@ -155,79 +251,83 @@ export function useMintSBT(): UseMintSBTReturn {
                     return {
                         status: "success",
                         mintedGenres: genreIds,
+                        mintedTiers: tiers,
                     };
                 }
 
                 setStatus("minting");
 
-                // 获取 provider
                 const provider = await wallet.getProvider();
+                await ensureNetwork(provider);
 
-                // 使用 viem encodeFunctionData 编码调用数据
+                // 编码调用数据
                 let data: `0x${string}`;
 
                 if (newGenreIds.length === 1) {
                     // 单个铸造
                     data = encodeFunctionData({
                         abi: MusicConsensusSBTAbi,
-                        functionName: "mintBadge",
-                        args: [userAddress, BigInt(newGenreIds[0]), "0x" as `0x${string}`],
+                        functionName: "mintTieredBadge",
+                        args: [userAddress, BigInt(newGenreIds[0]), newTiers[0], "0x" as `0x${string}`],
                     });
                 } else {
                     // 批量铸造
                     data = encodeFunctionData({
                         abi: MusicConsensusSBTAbi,
-                        functionName: "mintBatchBadges",
-                        args: [userAddress, newGenreIds.map(BigInt), "0x" as `0x${string}`],
+                        functionName: "mintBatchTieredBadges",
+                        args: [userAddress, newGenreIds.map(BigInt), newTiers, "0x" as `0x${string}`],
                     });
                 }
 
-                // 先切换到 Base Sepolia 网络
+                // 估算 gas (带备用值)
+                let gasLimit: bigint;
                 try {
-                    await provider.request({
-                        method: "wallet_switchEthereumChain",
-                        params: [{ chainId: "0x14a34" }], // 84532 in hex
+                    const gasEstimate = await publicClient.estimateGas({
+                        account: userAddress,
+                        to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                        data: data,
                     });
-                } catch (switchError: any) {
-                    // 如果网络不存在，添加网络
-                    if (switchError.code === 4902) {
-                        await provider.request({
-                            method: "wallet_addEthereumChain",
-                            params: [{
-                                chainId: "0x14a34",
-                                chainName: "Base Sepolia",
-                                nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-                                rpcUrls: ["https://sepolia.base.org"],
-                                blockExplorerUrls: ["https://sepolia.basescan.org"],
-                            }],
-                        });
-                    }
+                    // 增加 50% 缓冲
+                    gasLimit = (gasEstimate * 150n) / 100n;
+                    console.log("Gas 估算:", gasEstimate, "-> 使用:", gasLimit);
+                } catch (gasError) {
+                    // 估算失败时使用固定值
+                    console.warn("Gas 估算失败，使用固定值:", gasError);
+                    gasLimit = 200000n;
                 }
 
-                // 估算 gas
-                const gasEstimate = await publicClient.estimateGas({
-                    account: userAddress,
-                    to: MUSIC_CONSENSUS_SBT_ADDRESS,
-                    data: data,
+                // 确保 gasLimit 不为 0
+                if (gasLimit === 0n) {
+                    gasLimit = 200000n;
+                }
+
+                // 获取 gas 费用估算
+                const feeData = await publicClient.estimateFeesPerGas();
+                const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
+                console.log("Gas 费用:", {
+                    gasLimit,
+                    maxFeePerGas,
+                    maxPriorityFeePerGas
                 });
 
-                // 获取当前 gas 价格
-                const gasPrice = await publicClient.getGasPrice();
-
-                // 使用 eth_sendTransaction 发送交易（增加 20% gas 缓冲）
+                // 发送 EIP-1559 交易
                 const hash = await provider.request({
                     method: "eth_sendTransaction",
                     params: [{
                         from: userAddress,
                         to: MUSIC_CONSENSUS_SBT_ADDRESS,
                         data: data,
-                        gas: `0x${((gasEstimate * 120n) / 100n).toString(16)}`,
-                        gasPrice: `0x${gasPrice.toString(16)}`,
+                        gasLimit: `0x${gasLimit.toString(16)}`,
+                        maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                        maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
                     }],
                 }) as `0x${string}`;
+
                 setTxHash(hash);
 
-                // 等待交易确认
+                // 等待确认
                 const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
                 if (receipt.status === "success") {
@@ -237,6 +337,7 @@ export function useMintSBT(): UseMintSBTReturn {
                         status: "success",
                         txHash: hash,
                         mintedGenres: newGenreIds,
+                        mintedTiers: newTiers,
                     };
                 } else {
                     throw new Error("交易失败");
@@ -252,7 +353,116 @@ export function useMintSBT(): UseMintSBTReturn {
                 };
             }
         },
-        [wallet, getUserBadges]
+        [wallet, getUserBadges, ensureNetwork]
+    );
+
+    /**
+     * 旧版铸造 (兼容，使用传入的 tier)
+     */
+    const mint = useCallback(
+        async (genres: string[], tier: TierLevel = TIER.ENTRY): Promise<MintResult> => {
+            const genreIds = getGenreIds(genres);
+
+            if (genreIds.length === 0) {
+                return {
+                    status: "error",
+                    error: "没有可铸造的流派",
+                };
+            }
+
+            // 所有流派使用相同 tier
+            const tiers = genreIds.map(() => tier);
+
+            return mintTiered(genreIds, tiers);
+        },
+        [mintTiered]
+    );
+
+    /**
+     * 刷新徽章 (重新验证，更新时间戳和可能的等级)
+     */
+    const refreshBadge = useCallback(
+        async (genreId: number, newTier: TierLevel): Promise<MintResult> => {
+            try {
+                if (!wallet.account?.address) {
+                    throw new Error("钱包未连接");
+                }
+
+                if (wallet.status !== "connected") {
+                    throw new Error("钱包未就绪");
+                }
+
+                setStatus("minting");
+                setError(null);
+
+                const userAddress = wallet.account.address as `0x${string}`;
+                const provider = await wallet.getProvider();
+
+                await ensureNetwork(provider);
+
+                const data = encodeFunctionData({
+                    abi: MusicConsensusSBTAbi,
+                    functionName: "refreshBadge",
+                    args: [BigInt(genreId), newTier],
+                });
+
+                // 估算 gas (带备用值)
+                let gasLimit: bigint;
+                try {
+                    const gasEstimate = await publicClient.estimateGas({
+                        account: userAddress,
+                        to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                        data: data,
+                    });
+                    gasLimit = (gasEstimate * 150n) / 100n;
+                } catch {
+                    gasLimit = 100000n;
+                }
+                if (gasLimit === 0n) gasLimit = 100000n;
+
+                const feeData = await publicClient.estimateFeesPerGas();
+                const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
+                const hash = await provider.request({
+                    method: "eth_sendTransaction",
+                    params: [{
+                        from: userAddress,
+                        to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                        data: data,
+                        gasLimit: `0x${gasLimit.toString(16)}`,
+                        maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                        maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
+                    }],
+                }) as `0x${string}`;
+
+                setTxHash(hash);
+
+                const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+                if (receipt.status === "success") {
+                    setStatus("success");
+                    return {
+                        status: "success",
+                        txHash: hash,
+                        mintedGenres: [genreId],
+                        mintedTiers: [newTier],
+                    };
+                } else {
+                    throw new Error("刷新失败");
+                }
+            } catch (err) {
+                console.error("刷新徽章失败:", err);
+                const errorMessage = err instanceof Error ? err.message : "未知错误";
+                setStatus("error");
+                setError(errorMessage);
+                return {
+                    status: "error",
+                    error: errorMessage,
+                };
+            }
+        },
+        [wallet, ensureNetwork]
     );
 
     /**
@@ -272,8 +482,11 @@ export function useMintSBT(): UseMintSBTReturn {
         mintedGenres,
         faucetUrl: FAUCET_URL,
         mint,
+        mintTiered,
+        refreshBadge,
         checkBalance,
         getUserBadges,
+        getUserBadgesWithDetails,
         reset,
     };
 }

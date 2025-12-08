@@ -1,12 +1,13 @@
 /**
- * components/MintBadgeButton.tsx - 铸造徽章按钮组件
+ * components/MintBadgeButton.tsx - 铸造徽章按钮组件 V2
  * 
- * 显示铸造状态，调用 useMintSBT 铸造 SBT
+ * 显示铸造状态，调用 useMintSBT 铸造分层 SBT
  */
 
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
 import { useMintSBT } from "../hooks/useMintSBT";
+import { TIER, getTierInfo, type TierLevel } from "../lib/consensus/tier-calculator";
 
 // ============================================
 // 类型定义
@@ -15,6 +16,8 @@ import { useMintSBT } from "../hooks/useMintSBT";
 interface MintBadgeButtonProps {
     /** 要铸造的流派列表 */
     genres: string[];
+    /** 建议的等级 (来自 SpotifyVerifier) */
+    suggestedTier?: TierLevel;
     /** 铸造成功回调 */
     onSuccess?: (txHash: string, mintedGenres: number[]) => void;
     /** 铸造失败回调 */
@@ -44,6 +47,7 @@ const GENRE_NAMES: Record<number, string> = {
 
 export default function MintBadgeButton({
     genres,
+    suggestedTier = TIER.ENTRY,
     onSuccess,
     onError,
 }: MintBadgeButtonProps) {
@@ -58,6 +62,8 @@ export default function MintBadgeButton({
     } = useMintSBT();
 
     const [disabled, setDisabled] = useState(false);
+
+    const tierInfo = getTierInfo(suggestedTier);
 
     // 成功回调
     useEffect(() => {
@@ -74,13 +80,14 @@ export default function MintBadgeButton({
     }, [status, error, onError]);
 
     /**
-     * 处理铸造
+     * 处理铸造 (V2: 传入 tier)
      */
     const handleMint = async () => {
         if (disabled || genres.length === 0) return;
         setDisabled(true);
 
-        await mint(genres);
+        // 调用 mint，传入 tier
+        await mint(genres, suggestedTier);
 
         setDisabled(false);
     };
@@ -99,21 +106,36 @@ export default function MintBadgeButton({
     // 空闲状态
     if (status === "idle") {
         return (
-            <Pressable
-                onPress={handleMint}
-                disabled={disabled || genres.length === 0}
-                className="bg-primary-600 py-4 rounded-xl"
-                style={({ pressed }) => [
-                    { opacity: pressed ? 0.8 : 1 },
-                ]}
-            >
-                <View className="flex-row items-center justify-center">
-                    <Text className="text-2xl mr-2">🏆</Text>
-                    <Text className="text-white font-semibold text-lg">
-                        铸造音乐徽章
-                    </Text>
+            <View>
+                {/* 显示即将铸造的等级 */}
+                <View
+                    className="rounded-xl p-3 mb-3 flex-row items-center justify-between"
+                    style={{ backgroundColor: `${tierInfo.glowColor}` }}
+                >
+                    <View className="flex-row items-center">
+                        <Text className="text-xl mr-2">{tierInfo.emoji}</Text>
+                        <Text className="text-gray-300">
+                            将铸造 <Text style={{ color: tierInfo.color }} className="font-bold">{tierInfo.name}</Text> 级徽章
+                        </Text>
+                    </View>
                 </View>
-            </Pressable>
+
+                <Pressable
+                    onPress={handleMint}
+                    disabled={disabled || genres.length === 0}
+                    className="bg-primary-600 py-4 rounded-xl"
+                    style={({ pressed }) => [
+                        { opacity: pressed ? 0.8 : 1 },
+                    ]}
+                >
+                    <View className="flex-row items-center justify-center">
+                        <Text className="text-2xl mr-2">🏆</Text>
+                        <Text className="text-white font-semibold text-lg">
+                            铸造音乐徽章
+                        </Text>
+                    </View>
+                </Pressable>
+            </View>
         );
     }
 
@@ -159,7 +181,7 @@ export default function MintBadgeButton({
                 <View className="items-center">
                     <ActivityIndicator size="large" color="#a855f7" />
                     <Text className="text-primary-400 mt-4 font-semibold">
-                        正在铸造徽章...
+                        正在铸造 {tierInfo.emoji} {tierInfo.name} 级徽章...
                     </Text>
                     <Text className="text-gray-400 text-sm mt-2">
                         请在钱包中确认交易
@@ -179,7 +201,9 @@ export default function MintBadgeButton({
 
                 {mintedGenres.length > 0 && (
                     <View className="mb-3">
-                        <Text className="text-gray-300 text-sm mb-2">获得的徽章：</Text>
+                        <Text className="text-gray-300 text-sm mb-2">
+                            获得的 {tierInfo.emoji} {tierInfo.name} 级徽章：
+                        </Text>
                         <View className="flex-row flex-wrap gap-2">
                             {mintedGenres.map((genreId) => (
                                 <View

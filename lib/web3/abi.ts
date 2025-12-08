@@ -1,11 +1,49 @@
 /**
- * lib/web3/abi.ts - MusicConsensusSBT 合约 ABI
+ * lib/web3/abi.ts - MusicConsensusSBT V2 合约 ABI
  * 
- * 简化版 ABI，只包含需要的函数
+ * 功能：
+ * - 分层徽章 (Tiered Badges)
+ * - 动态生命周期 (Decay Mechanism)
+ * - 行为证明 (POAP Extension)
  */
 
 export const MusicConsensusSBTAbi = [
-    // 铸造单个徽章
+    // ============================================
+    // 分层铸造函数 (V2 核心)
+    // ============================================
+
+    // 铸造分层徽章
+    {
+        name: "mintTieredBadge",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+            { name: "tier", type: "uint8" },
+            { name: "data", type: "bytes" },
+        ],
+        outputs: [],
+    },
+    // 批量分层铸造
+    {
+        name: "mintBatchTieredBadges",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreIds", type: "uint256[]" },
+            { name: "tiers", type: "uint8[]" },
+            { name: "data", type: "bytes" },
+        ],
+        outputs: [],
+    },
+
+    // ============================================
+    // 兼容旧版函数
+    // ============================================
+
+    // 铸造单个徽章 (默认 tier=1)
     {
         name: "mintBadge",
         type: "function",
@@ -17,7 +55,7 @@ export const MusicConsensusSBTAbi = [
         ],
         outputs: [],
     },
-    // 批量铸造
+    // 批量铸造 (默认 tier=1)
     {
         name: "mintBatchBadges",
         type: "function",
@@ -29,7 +67,46 @@ export const MusicConsensusSBTAbi = [
         ],
         outputs: [],
     },
-    // 销毁徽章
+
+    // ============================================
+    // 刷新 & 衰减
+    // ============================================
+
+    // 刷新徽章
+    {
+        name: "refreshBadge",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "genreId", type: "uint256" },
+            { name: "newTier", type: "uint8" },
+        ],
+        outputs: [],
+    },
+    // 检查并衰减单个徽章
+    {
+        name: "checkAndDecayBadge",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+        ],
+        outputs: [],
+    },
+    // 批量检查衰减
+    {
+        name: "checkAllBadgesDecay",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [{ name: "user", type: "address" }],
+        outputs: [],
+    },
+
+    // ============================================
+    // 销毁
+    // ============================================
+
     {
         name: "burnBadge",
         type: "function",
@@ -37,9 +114,25 @@ export const MusicConsensusSBTAbi = [
         inputs: [{ name: "genreId", type: "uint256" }],
         outputs: [],
     },
-    // 检查徽章
+
+    // ============================================
+    // 查询函数
+    // ============================================
+
+    // 检查徽章 (兼容旧版)
     {
         name: "checkBadge",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+    },
+    // hasBadge (兼容旧版)
+    {
+        name: "hasBadge",
         type: "function",
         stateMutability: "view",
         inputs: [
@@ -56,6 +149,45 @@ export const MusicConsensusSBTAbi = [
         inputs: [{ name: "user", type: "address" }],
         outputs: [{ name: "badges", type: "uint256[]" }],
     },
+    // 获取徽章状态
+    {
+        name: "getBadgeStatus",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+        ],
+        outputs: [{ name: "isActive", type: "bool" }],
+    },
+    // 获取徽章详细信息
+    {
+        name: "getBadgeInfo",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+        ],
+        outputs: [
+            { name: "tier", type: "uint8" },
+            { name: "lastVerified", type: "uint64" },
+            { name: "status", type: "uint8" },
+            { name: "isExpired", type: "bool" },
+        ],
+    },
+    // 获取所有活跃徽章详情
+    {
+        name: "getActiveBadgesWithInfo",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "user", type: "address" }],
+        outputs: [
+            { name: "genreIds", type: "uint256[]" },
+            { name: "tiers", type: "uint8[]" },
+            { name: "isActives", type: "bool[]" },
+        ],
+    },
     // 获取流派名称
     {
         name: "genreNames",
@@ -63,17 +195,6 @@ export const MusicConsensusSBTAbi = [
         stateMutability: "view",
         inputs: [{ name: "genreId", type: "uint256" }],
         outputs: [{ name: "", type: "string" }],
-    },
-    // 是否已有徽章
-    {
-        name: "hasBadge",
-        type: "function",
-        stateMutability: "view",
-        inputs: [
-            { name: "user", type: "address" },
-            { name: "genreId", type: "uint256" },
-        ],
-        outputs: [{ name: "", type: "bool" }],
     },
     // 余额查询 (ERC1155)
     {
@@ -86,7 +207,44 @@ export const MusicConsensusSBTAbi = [
         ],
         outputs: [{ name: "", type: "uint256" }],
     },
-    // 徽章铸造事件
+
+    // ============================================
+    // 常量
+    // ============================================
+
+    {
+        name: "VERIFICATION_VALIDITY",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint64" }],
+    },
+    {
+        name: "TIER_ENTRY",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint8" }],
+    },
+    {
+        name: "TIER_VETERAN",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint8" }],
+    },
+    {
+        name: "TIER_OG",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint8" }],
+    },
+
+    // ============================================
+    // 事件
+    // ============================================
+
     {
         name: "BadgeMinted",
         type: "event",
@@ -94,6 +252,33 @@ export const MusicConsensusSBTAbi = [
             { name: "user", type: "address", indexed: true },
             { name: "genreId", type: "uint256", indexed: true },
             { name: "genreName", type: "string", indexed: false },
+            { name: "tier", type: "uint8", indexed: false },
+        ],
+    },
+    {
+        name: "BadgeRefreshed",
+        type: "event",
+        inputs: [
+            { name: "user", type: "address", indexed: true },
+            { name: "genreId", type: "uint256", indexed: true },
+            { name: "oldTier", type: "uint8", indexed: false },
+            { name: "newTier", type: "uint8", indexed: false },
+        ],
+    },
+    {
+        name: "BadgeDecayed",
+        type: "event",
+        inputs: [
+            { name: "user", type: "address", indexed: true },
+            { name: "genreId", type: "uint256", indexed: true },
+        ],
+    },
+    {
+        name: "BadgeBurned",
+        type: "event",
+        inputs: [
+            { name: "user", type: "address", indexed: true },
+            { name: "genreId", type: "uint256", indexed: true },
         ],
     },
 ] as const;
@@ -172,3 +357,25 @@ export function getGenreIds(genres: string[]): number[] {
 
     return ids;
 }
+
+// ============================================
+// Tier 等级常量 & 辅助函数
+// ============================================
+
+export const TIER = {
+    ENTRY: 1,    // 入门
+    VETERAN: 2,  // 资深
+    OG: 3,       // OG
+} as const;
+
+export const TIER_NAMES: Record<number, string> = {
+    1: "入门",
+    2: "资深",
+    3: "OG",
+};
+
+export const TIER_NAMES_EN: Record<number, string> = {
+    1: "Entry",
+    2: "Veteran",
+    3: "OG",
+};

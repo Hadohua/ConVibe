@@ -1,8 +1,12 @@
 /**
- * components/SpotifyVerifier.tsx - Spotify 音乐品味验证组件
+ * components/SpotifyVerifier.tsx - Spotify 音乐品味验证组件 V2
  * 
  * 使用 Reclaim Protocol 验证用户的 Spotify 听歌数据，
  * 并将验证与用户的钱包地址绑定，防止重放攻击。
+ * 
+ * V2 新增：
+ * - 根据 popularity 计算品味浓度等级 (Tier)
+ * - 显示等级信息供后续铸造使用
  */
 
 import { useState, useCallback } from "react";
@@ -14,6 +18,12 @@ import {
     getReclaimAppSecret,
     getSpotifyProviderId,
 } from "../lib/web3/reclaim-config";
+import {
+    calculateTierFromPopularity,
+    getTierInfo,
+    TIER,
+    type TierLevel,
+} from "../lib/consensus/tier-calculator";
 
 // ============================================
 // 类型定义
@@ -29,19 +39,29 @@ interface SpotifyArtist {
     popularity: number;
 }
 
-/** 解析后的证明数据 */
+/** 流派与其 Tier */
+interface GenreWithTier {
+    genre: string;
+    tier: TierLevel;
+    popularity: number;
+}
+
+/** 解析后的证明数据 V2 */
 interface ParsedProofData {
     topArtist: SpotifyArtist | null;
     genres: string[];
+    genresWithTiers: GenreWithTier[];  // V2: 包含 tier 信息
+    averagePopularity: number;         // V2: 平均热度
     rawContext: Record<string, unknown>;
 }
 
-/** 验证结果 */
+/** 验证结果 V2 */
 interface VerificationResult {
     proof: Proof | null;
     parsedData: ParsedProofData | null;
     walletAddress: string;
     timestamp: number;
+    suggestedTier: TierLevel;  // V2: 建议的整体等级
 }
 
 /** 组件 Props */
@@ -55,13 +75,15 @@ interface SpotifyVerifierProps {
 // ============================================
 
 /**
- * 解析 Reclaim 证明数据
- * 从 proof.claimData.context 中提取 Spotify 数据
+ * 解析 Reclaim 证明数据 V2
+ * 从 proof.claimData.context 中提取 Spotify 数据并计算 Tier
  */
 function parseProofData(proof: Proof): ParsedProofData {
     const result: ParsedProofData = {
         topArtist: null,
         genres: [],
+        genresWithTiers: [],
+        averagePopularity: 0,
         rawContext: {},
     };
 
@@ -71,24 +93,46 @@ function parseProofData(proof: Proof): ParsedProofData {
             const contextData = JSON.parse(proof.claimData.context);
             result.rawContext = contextData;
 
+            let totalPopularity = 0;
+            let popularityCount = 0;
+
             // 尝试提取艺人数据 (结构可能因 Provider 而异)
-            // Spotify - User Data provider 可能返回 extractedParameters
             if (contextData.extractedParameters) {
                 const params = contextData.extractedParameters;
 
-                // 查找艺人名称
+                // 查找艺人名称和热度
+                const artistPopularity = parseInt(params.popularity) || 0;
+
                 if (params.artistName || params.name) {
                     result.topArtist = {
                         name: params.artistName || params.name || "Unknown Artist",
                         genres: params.genres ? params.genres.split(",") : [],
-                        popularity: parseInt(params.popularity) || 0,
+                        popularity: artistPopularity,
                     };
+
+                    if (artistPopularity > 0) {
+                        totalPopularity += artistPopularity;
+                        popularityCount++;
+                    }
                 }
 
-                // 提取流派
+                // 提取流派并计算各自的 Tier
                 if (params.genres) {
-                    result.genres = params.genres.split(",").map((g: string) => g.trim());
+                    const genreList = params.genres.split(",").map((g: string) => g.trim());
+                    result.genres = genreList;
+
+                    // 为每个流派计算 Tier (使用艺人 popularity 作为基准)
+                    result.genresWithTiers = genreList.map((genre: string) => ({
+                        genre,
+                        tier: calculateTierFromPopularity(artistPopularity),
+                        popularity: artistPopularity,
+                    }));
                 }
+            }
+
+            // 计算平均热度
+            if (popularityCount > 0) {
+                result.averagePopularity = Math.round(totalPopularity / popularityCount);
             }
 
             // 备用：直接从 parameters 提取
@@ -106,6 +150,22 @@ function parseProofData(proof: Proof): ParsedProofData {
     }
 
     return result;
+}
+
+/**
+ * 根据解析数据计算建议的整体 Tier
+ */
+function calculateSuggestedTier(parsedData: ParsedProofData): TierLevel {
+    if (parsedData.averagePopularity > 0) {
+        return calculateTierFromPopularity(parsedData.averagePopularity);
+    }
+
+    if (parsedData.topArtist && parsedData.topArtist.popularity > 0) {
+        return calculateTierFromPopularity(parsedData.topArtist.popularity);
+    }
+
+    // 默认入门
+    return TIER.ENTRY;
 }
 
 // ============================================
@@ -137,7 +197,7 @@ export default function SpotifyVerifier({
      * 1. 初始化 ReclaimProofRequest
      * 2. 使用 addContext 绑定钱包地址（防止重放攻击）
      * 3. 启动验证会话
-     * 4. 解析返回的证明数据
+     * 4. 解析返回的证明数据并计算 Tier
      */
     const startVerification = useCallback(async () => {
         const appId = getReclaimAppId();
@@ -162,7 +222,7 @@ export default function SpotifyVerifier({
             setStatus("verifying");
             setErrorMessage(null);
 
-            console.log("=== 开始 Spotify 验证 ===");
+            console.log("=== 开始 Spotify 验证 (V2) ===");
             console.log("钱包地址:", walletAddress);
             console.log("Provider ID:", providerId);
 
@@ -174,8 +234,7 @@ export default function SpotifyVerifier({
             );
 
             // 2. 关键：添加钱包地址作为 Context
-            // 这将证明与用户的钱包绑定，防止盗用他人的证明
-            proofRequest.addContext(walletAddress, "VibeConsensus Music Verification");
+            proofRequest.addContext(walletAddress, "VibeConsensus Music Verification V2");
 
             console.log("已添加钱包地址到 Context");
 
@@ -200,6 +259,10 @@ export default function SpotifyVerifier({
 
                     // 解析证明数据
                     const parsedData = parseProofData(proof);
+                    const suggestedTier = calculateSuggestedTier(parsedData);
+
+                    console.log("解析后数据:", parsedData);
+                    console.log("建议等级:", suggestedTier);
 
                     // 构建结果
                     const verificationResult: VerificationResult = {
@@ -207,6 +270,7 @@ export default function SpotifyVerifier({
                         parsedData,
                         walletAddress,
                         timestamp: Date.now(),
+                        suggestedTier,
                     };
 
                     setResult(verificationResult);
@@ -341,6 +405,45 @@ export default function SpotifyVerifier({
                             </Text>
                         </View>
 
+                        {/* V2: 品味浓度等级 */}
+                        {result.suggestedTier && (
+                            <View
+                                className="rounded-xl p-4 mb-4 border"
+                                style={{
+                                    backgroundColor: `${getTierInfo(result.suggestedTier).glowColor}`,
+                                    borderColor: getTierInfo(result.suggestedTier).color,
+                                }}
+                            >
+                                <View className="flex-row items-center justify-between">
+                                    <View>
+                                        <Text className="text-gray-400 text-sm mb-1">品味浓度等级</Text>
+                                        <View className="flex-row items-center">
+                                            <Text className="text-2xl mr-2">
+                                                {getTierInfo(result.suggestedTier).emoji}
+                                            </Text>
+                                            <Text
+                                                className="text-2xl font-bold"
+                                                style={{ color: getTierInfo(result.suggestedTier).color }}
+                                            >
+                                                {getTierInfo(result.suggestedTier).name}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {result.parsedData && result.parsedData.averagePopularity > 0 && (
+                                        <View className="items-end">
+                                            <Text className="text-gray-500 text-xs">热度指数</Text>
+                                            <Text className="text-white text-xl font-bold">
+                                                {result.parsedData.averagePopularity}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text className="text-gray-400 text-sm mt-2">
+                                    {getTierInfo(result.suggestedTier).description}
+                                </Text>
+                            </View>
+                        )}
+
                         {/* 流派标签 */}
                         {result.parsedData?.genres && result.parsedData.genres.length > 0 && (
                             <View className="mb-4">
@@ -426,3 +529,6 @@ export default function SpotifyVerifier({
         </View>
     );
 }
+
+// 导出类型供其他组件使用
+export type { VerificationResult, ParsedProofData, GenreWithTier };

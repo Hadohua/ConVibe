@@ -1,29 +1,19 @@
 /**
- * scripts/deploy.js - 部署 MusicConsensusSBT V2 合约
+ * scripts/deploy.ts - 部署 MusicConsensusSBT V2 合约
  * 
  * 使用方法:
- * node scripts/deploy.js
- * 
- * 需要先在 .env 中设置 PRIVATE_KEY
+ * npx hardhat run scripts/deploy.ts --network baseSepolia
  */
 
-import { createPublicClient, createWalletClient, http, formatEther } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
+import { ethers } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 加载 .env
-import "dotenv/config";
 
 async function main() {
     console.log("🚀 开始部署 MusicConsensusSBT V2...\n");
 
     // 配置
+    const RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org";
     const PRIVATE_KEY = process.env.PRIVATE_KEY;
     const BASE_URI = "ipfs://QmYourMetadataHash/"; // 替换为你的 IPFS 元数据
 
@@ -31,26 +21,15 @@ async function main() {
         throw new Error("请在 .env 中设置 PRIVATE_KEY");
     }
 
-    // 创建账户
-    const account = privateKeyToAccount(PRIVATE_KEY.startsWith("0x") ? PRIVATE_KEY : `0x${PRIVATE_KEY}`);
+    // 连接网络
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-    console.log("📍 部署者地址:", account.address);
-
-    // 创建客户端
-    const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http(),
-    });
-
-    const walletClient = createWalletClient({
-        account,
-        chain: baseSepolia,
-        transport: http(),
-    });
+    console.log("📍 部署者地址:", wallet.address);
 
     // 获取余额
-    const balance = await publicClient.getBalance({ address: account.address });
-    console.log("💰 余额:", formatEther(balance), "ETH\n");
+    const balance = await provider.getBalance(wallet.address);
+    console.log("💰 余额:", ethers.formatEther(balance), "ETH\n");
 
     if (balance === 0n) {
         throw new Error("余额不足，请先获取测试 ETH: https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet");
@@ -64,25 +43,19 @@ async function main() {
     }
 
     const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    const abi = artifact.abi;
-    const bytecode = artifact.bytecode;
+
+    // 创建合约工厂
+    const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
 
     console.log("📦 部署合约中...");
 
-    // 部署合约 - 使用 deployContract
-    const hash = await walletClient.deployContract({
-        abi,
-        bytecode,
-        args: [account.address, BASE_URI],
-    });
+    // 部署合约
+    const contract = await factory.deploy(wallet.address, BASE_URI);
 
-    console.log("⏳ 交易已发送:", hash);
-    console.log("   等待确认...");
+    console.log("⏳ 等待交易确认...");
+    await contract.waitForDeployment();
 
-    // 等待交易确认
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-    const contractAddress = receipt.contractAddress;
+    const contractAddress = await contract.getAddress();
 
     console.log("\n✅ 部署成功！");
     console.log("📝 合约地址:", contractAddress);
@@ -93,9 +66,9 @@ async function main() {
         network: "baseSepolia",
         chainId: 84532,
         address: contractAddress,
-        deployer: account.address,
+        deployer: wallet.address,
         timestamp: new Date().toISOString(),
-        txHash: hash,
+        txHash: contract.deploymentTransaction()?.hash,
     };
 
     const deploymentPath = path.join(__dirname, "../deployments");

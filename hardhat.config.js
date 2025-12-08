@@ -16,13 +16,17 @@ const config = {
         artifacts: "./artifacts",
     },
     networks: {
-        hardhat: {},
+        hardhat: {
+            type: "edr-simulated",
+        },
         baseSepolia: {
+            type: "http",
             url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
             accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
             chainId: 84532,
         },
         base: {
+            type: "http",
             url: process.env.BASE_RPC_URL || "https://mainnet.base.org",
             accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
             chainId: 8453,
@@ -30,4 +34,4 @@ const config = {
     },
 };
 
-module.exports = config;
+export default config;

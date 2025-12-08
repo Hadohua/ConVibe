@@ -11,8 +11,8 @@ import { baseSepolia } from "viem/chains";
 // 常量
 // ============================================
 
-/** 合约地址 - MVP 版本 (无 onlyOwner 限制) */
-export const MUSIC_CONSENSUS_SBT_ADDRESS = "0xd3372dA66Faed07b730D80A9e3Eed04cFcb99024" as const;
+/** 合约地址 - V2 版本 (分层徽章 + 衰减机制) */
+export const MUSIC_CONSENSUS_SBT_ADDRESS = "0xf8555a1abc227233fe3cf17824346645724950dc" as const;
 
 /** Base Sepolia RPC */
 export const BASE_SEPOLIA_RPC = "https://sepolia.base.org";

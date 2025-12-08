@@ -52,6 +52,7 @@
     "@openzeppelin/contracts": "^5.4.0",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "^54.0.8",
+    "dotenv": "^17.2.3",
     "hardhat": "^3.0.17",
     "typescript": "~5.9.2"
   },
