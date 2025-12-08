@@ -1,0 +1,9 @@
+/**
+ * components/ui/.gitkeep
+ * 
+ * 占位文件 - 确保空文件夹被 Git 追踪
+ * 这个目录用于存放可复用的 UI 组件，例如：
+ * - Button.tsx (自定义按钮)
+ * - Card.tsx (卡片容器)
+ * - Input.tsx (输入框)
+ */

@@ -1,0 +1,13 @@
+/* 
+ * 全局 CSS 文件 - NativeWind/TailwindCSS 的入口点
+ * 这三行指令会在构建时被 Tailwind 替换为实际的样式规则
+ */
+
+/* 基础样式重置和核心样式 */
+@tailwind base;
+
+/* 组件样式（如 .btn、.card 等预定义样式） */
+@tailwind components;
+
+/* 工具类样式（如 .flex、.bg-gray-900 等） */
+@tailwind utilities;

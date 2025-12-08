@@ -1,6 +1,10 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // 启用 Bundler 模块解析模式
+    // 这允许 TypeScript 正确解析使用 package.json "exports" 字段的包
+    // Privy SDK 和其他现代 npm 包需要这个设置
+    "moduleResolution": "Bundler"
   }
 }

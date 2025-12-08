@@ -1,0 +1,9 @@
+/**
+ * lib/web3/.gitkeep
+ * 
+ * Web3 配置目录占位文件
+ * 这个目录用于存放区块链相关配置，例如：
+ * - client.ts (Viem 客户端配置)
+ * - wagmi.ts (Wagmi 配置)
+ * - contracts.ts (合约 ABI 和地址)
+ */
