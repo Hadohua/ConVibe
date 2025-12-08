@@ -10,8 +10,24 @@ import { makeRedirectUri } from "expo-auth-session";
 // 配置
 // ============================================
 
-/** Spotify Client ID */
-export const SPOTIFY_CLIENT_ID = "c0a87b6db7234107b90d06da97e92be7";
+/**
+ * 获取 Spotify Client ID
+ * 
+ * 虽然 PKCE 流程中 Client ID 本身是公开的，
+ * 但在开源项目中最佳实践是通过环境变量管理。
+ */
+export const getSpotifyClientId = (): string => {
+    const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
+    if (!clientId) {
+        console.warn(
+            '⚠️ EXPO_PUBLIC_SPOTIFY_CLIENT_ID 未设置！\n' +
+            '请在 .env 文件中配置 Spotify Client ID。\n' +
+            '获取方式：https://developer.spotify.com/dashboard'
+        );
+        return '';
+    }
+    return clientId;
+};
 
 /** Spotify OAuth 端点 */
 export const SPOTIFY_AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
@@ -40,13 +56,14 @@ export function getRedirectUri(): string {
 
 /**
  * Spotify 认证配置
+ * 注意：clientId 需要通过函数调用获取
  */
-export const spotifyAuthConfig = {
-    clientId: SPOTIFY_CLIENT_ID,
+export const getSpotifyAuthConfig = () => ({
+    clientId: getSpotifyClientId(),
     scopes: SPOTIFY_SCOPES,
     redirectUri: getRedirectUri(),
     usePKCE: true,
-};
+});
 
 /**
  * OAuth Discovery 文档
