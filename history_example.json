@@ -1,0 +1,742 @@
+[
+    {
+        "ts": "2024-01-15T10:23:45Z",
+        "ms_played": 245000,
+        "master_metadata_track_name": "Shape of You",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-15T10:28:30Z",
+        "ms_played": 228000,
+        "master_metadata_track_name": "Perfect",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:0tgVpDi06FyKpA1z0VMD4v",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-15T14:05:12Z",
+        "ms_played": 193000,
+        "master_metadata_track_name": "Blinding Lights",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "After Hours",
+        "spotify_track_uri": "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-15T14:08:25Z",
+        "ms_played": 267000,
+        "master_metadata_track_name": "Starboy",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "Starboy",
+        "spotify_track_uri": "spotify:track:7MXVkk9YMctZqd1Srtv4MB",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-15T18:30:00Z",
+        "ms_played": 180000,
+        "master_metadata_track_name": "HUMBLE.",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "DAMN.",
+        "spotify_track_uri": "spotify:track:7KXjTSCq5nL1LoYtL7XAwS",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-16T09:15:33Z",
+        "ms_played": 205000,
+        "master_metadata_track_name": "Bad Guy",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+        "spotify_track_uri": "spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-16T09:19:00Z",
+        "ms_played": 215000,
+        "master_metadata_track_name": "Therefore I Am",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "Therefore I Am",
+        "spotify_track_uri": "spotify:track:54bFM56PmE4YLRnqpW6Tha",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-16T12:40:22Z",
+        "ms_played": 355000,
+        "master_metadata_track_name": "Bohemian Rhapsody",
+        "master_metadata_album_artist_name": "Queen",
+        "master_metadata_album_album_name": "A Night at the Opera",
+        "spotify_track_uri": "spotify:track:7tFiyTwD0nx5a1eklYtX2J",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-16T18:22:10Z",
+        "ms_played": 254000,
+        "master_metadata_track_name": "Anti-Hero",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Midnights",
+        "spotify_track_uri": "spotify:track:0V3wPSX9ygBnCm8psDIegu",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-16T18:26:30Z",
+        "ms_played": 232000,
+        "master_metadata_track_name": "Shake It Off",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "1989",
+        "spotify_track_uri": "spotify:track:0cqRj7pUJDkTCEsJkx8snD",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-17T08:10:45Z",
+        "ms_played": 189000,
+        "master_metadata_track_name": "Flowers",
+        "master_metadata_album_artist_name": "Miley Cyrus",
+        "master_metadata_album_album_name": "Endless Summer Vacation",
+        "spotify_track_uri": "spotify:track:0yLdNVWF3Srea0uzk55zFn",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-17T10:30:00Z",
+        "ms_played": 178000,
+        "master_metadata_track_name": "Levitating",
+        "master_metadata_album_artist_name": "Dua Lipa",
+        "master_metadata_album_album_name": "Future Nostalgia",
+        "spotify_track_uri": "spotify:track:463CkQjx2Zk1yXoBuierM9",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-17T14:45:20Z",
+        "ms_played": 198000,
+        "master_metadata_track_name": "As It Was",
+        "master_metadata_album_artist_name": "Harry Styles",
+        "master_metadata_album_album_name": "Harry's House",
+        "spotify_track_uri": "spotify:track:4Dvkj6JhhA12EX05fT7y2e",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-17T14:49:00Z",
+        "ms_played": 162000,
+        "master_metadata_track_name": "Watermelon Sugar",
+        "master_metadata_album_artist_name": "Harry Styles",
+        "master_metadata_album_album_name": "Fine Line",
+        "spotify_track_uri": "spotify:track:6UelLqGlWMcVH1E5c4H7lY",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-17T20:15:33Z",
+        "ms_played": 241000,
+        "master_metadata_track_name": "uptown funk",
+        "master_metadata_album_artist_name": "Bruno Mars",
+        "master_metadata_album_album_name": "Uptown Special",
+        "spotify_track_uri": "spotify:track:32OlwWuMpZ6b0aN2RZOeMS",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-18T11:20:00Z",
+        "ms_played": 285000,
+        "master_metadata_track_name": "Shape of You",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-18T11:25:00Z",
+        "ms_played": 220000,
+        "master_metadata_track_name": "Thinking Out Loud",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "x (Multiply)",
+        "spotify_track_uri": "spotify:track:34gCuhDGsG4bRPIf9bb02f",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-18T15:40:15Z",
+        "ms_played": 234000,
+        "master_metadata_track_name": "DNA.",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "DAMN.",
+        "spotify_track_uri": "spotify:track:6HZILIRieu8S0iqY8kIKhj",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-18T15:44:30Z",
+        "ms_played": 195000,
+        "master_metadata_track_name": "HUMBLE.",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "DAMN.",
+        "spotify_track_uri": "spotify:track:7KXjTSCq5nL1LoYtL7XAwS",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-19T09:00:00Z",
+        "ms_played": 203000,
+        "master_metadata_track_name": "Blank Space",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "1989",
+        "spotify_track_uri": "spotify:track:1p80LdxRV74UKvL8gnD7ky",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-19T09:04:00Z",
+        "ms_played": 199000,
+        "master_metadata_track_name": "Love Story",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Fearless",
+        "spotify_track_uri": "spotify:track:1vrd6UOGamcKNGnSHJQlSt",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-19T12:30:45Z",
+        "ms_played": 190000,
+        "master_metadata_track_name": "Save Your Tears",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "After Hours",
+        "spotify_track_uri": "spotify:track:5QO79kh1waicV47BqGRL3g",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-19T12:34:15Z",
+        "ms_played": 216000,
+        "master_metadata_track_name": "The Hills",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "Beauty Behind the Madness",
+        "spotify_track_uri": "spotify:track:7fBv7CLKzipRk6EC6TWHOB",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-19T18:00:00Z",
+        "ms_played": 245000,
+        "master_metadata_track_name": "Castle on the Hill",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:6qnuLMpHTaFYNS7sHWq6zW",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-20T07:15:30Z",
+        "ms_played": 210000,
+        "master_metadata_track_name": "Cruel Summer",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Lover",
+        "spotify_track_uri": "spotify:track:1BxfuPKGuaTgP7aM0Bbdwr",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-20T10:45:00Z",
+        "ms_played": 188000,
+        "master_metadata_track_name": "Lovely",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "Lovely",
+        "spotify_track_uri": "spotify:track:0u2P5u6lvoDfwTYjAADbn4",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-20T14:20:22Z",
+        "ms_played": 272000,
+        "master_metadata_track_name": "God's Plan",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Scorpion",
+        "spotify_track_uri": "spotify:track:6DCZcSspjsKoFjzjrWoCdn",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-20T14:25:00Z",
+        "ms_played": 218000,
+        "master_metadata_track_name": "Hotline Bling",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Views",
+        "spotify_track_uri": "spotify:track:0wwPcA6wtMf6HUMpIRdeP7",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-20T18:10:10Z",
+        "ms_played": 234000,
+        "master_metadata_track_name": "Shape of You",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-21T09:30:00Z",
+        "ms_played": 195000,
+        "master_metadata_track_name": "Blinding Lights",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "After Hours",
+        "spotify_track_uri": "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-21T11:45:15Z",
+        "ms_played": 184000,
+        "master_metadata_track_name": "Money Trees",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "good kid, m.A.A.d city",
+        "spotify_track_uri": "spotify:track:2HbKqm4o0w5wEeEFXm2sD4",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-21T15:20:30Z",
+        "ms_played": 247000,
+        "master_metadata_track_name": "Bad Guy",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+        "spotify_track_uri": "spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-21T19:00:00Z",
+        "ms_played": 198000,
+        "master_metadata_track_name": "One Dance",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Views",
+        "spotify_track_uri": "spotify:track:1zi7xx7UVEFkmKfv06H8vS",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-22T08:30:00Z",
+        "ms_played": 225000,
+        "master_metadata_track_name": "Photograph",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "x (Multiply)",
+        "spotify_track_uri": "spotify:track:1HNkqx9Ahdgi1Ixy2xkKkL",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-22T11:15:45Z",
+        "ms_played": 210000,
+        "master_metadata_track_name": "Don't Start Now",
+        "master_metadata_album_artist_name": "Dua Lipa",
+        "master_metadata_album_album_name": "Future Nostalgia",
+        "spotify_track_uri": "spotify:track:6WrPjuy2DLqBsxDfhVXdhQ",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-22T14:40:20Z",
+        "ms_played": 202000,
+        "master_metadata_track_name": "All Too Well",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Red (Taylor's Version)",
+        "spotify_track_uri": "spotify:track:2dHvvnMHLUwnpqRr0LpqNK",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-22T18:20:00Z",
+        "ms_played": 187000,
+        "master_metadata_track_name": "Swimming Pools (Drank)",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "good kid, m.A.A.d city",
+        "spotify_track_uri": "spotify:track:4KPbLhAURN4W46OGxiJZPP",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-23T09:00:00Z",
+        "ms_played": 268000,
+        "master_metadata_track_name": "Galway Girl",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:0VFq9JHKvEAqANjkKbvFjT",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-23T12:30:15Z",
+        "ms_played": 178000,
+        "master_metadata_track_name": "Call Out My Name",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "My Dear Melancholy,",
+        "spotify_track_uri": "spotify:track:6WJxDSUqLQXVbZ2cF1GgZ4",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-23T15:45:30Z",
+        "ms_played": 195000,
+        "master_metadata_track_name": "22",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Red",
+        "spotify_track_uri": "spotify:track:7gHs73wELdeycvS48M4bgY",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-23T19:10:00Z",
+        "ms_played": 223000,
+        "master_metadata_track_name": "Ocean Eyes",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "dont smile at me",
+        "spotify_track_uri": "spotify:track:37EEXuUk9VVZy6RxnM6fgD",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-24T08:15:45Z",
+        "ms_played": 256000,
+        "master_metadata_track_name": "Shivers",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "=",
+        "spotify_track_uri": "spotify:track:50nfwKoDiSYg8VlhXXJk35",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-24T11:30:30Z",
+        "ms_played": 199000,
+        "master_metadata_track_name": "New Rules",
+        "master_metadata_album_artist_name": "Dua Lipa",
+        "master_metadata_album_album_name": "Dua Lipa",
+        "spotify_track_uri": "spotify:track:2ekn2ttSfGqwhhate0LSR0",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-24T14:50:00Z",
+        "ms_played": 215000,
+        "master_metadata_track_name": "Started From the Bottom",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Nothing Was the Same",
+        "spotify_track_uri": "spotify:track:2rIgLFMuXS0X9r4wUW4K3c",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-24T18:20:15Z",
+        "ms_played": 232000,
+        "master_metadata_track_name": "Style",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "1989",
+        "spotify_track_uri": "spotify:track:1hjRhYpWyqDpPahmSlUTlc",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-25T09:45:00Z",
+        "ms_played": 188000,
+        "master_metadata_track_name": "Happier Than Ever",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "Happier Than Ever",
+        "spotify_track_uri": "spotify:track:4RVwu0g32PAqgUiJoXsdF8",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-25T12:10:30Z",
+        "ms_played": 248000,
+        "master_metadata_track_name": "Shape of You",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-25T15:35:45Z",
+        "ms_played": 196000,
+        "master_metadata_track_name": "Die For You",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "Starboy",
+        "spotify_track_uri": "spotify:track:2LBqCSwhJGcFQeTHMVGwy3",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-25T19:00:20Z",
+        "ms_played": 205000,
+        "master_metadata_track_name": "Alright",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "To Pimp a Butterfly",
+        "spotify_track_uri": "spotify:track:3iVcZ5G6tvkXZkZKlMpIUs",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-26T08:30:00Z",
+        "ms_played": 18000,
+        "master_metadata_track_name": "Skipped Song",
+        "master_metadata_album_artist_name": "Unknown Artist",
+        "master_metadata_album_album_name": "Unknown Album",
+        "spotify_track_uri": "spotify:track:skipped123",
+        "reason_start": "clickrow",
+        "reason_end": "fwdbtn"
+    },
+    {
+        "ts": "2024-01-26T08:30:30Z",
+        "ms_played": 230000,
+        "master_metadata_track_name": "A Team",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "+ (Plus)",
+        "spotify_track_uri": "spotify:track:5vKPsJN4i9cE9qxUMVL0fD",
+        "reason_start": "fwdbtn",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-26T11:45:15Z",
+        "ms_played": 0,
+        "master_metadata_track_name": null,
+        "master_metadata_album_artist_name": null,
+        "master_metadata_album_album_name": null,
+        "spotify_track_uri": null,
+        "reason_start": "unknown",
+        "reason_end": "unknown"
+    },
+    {
+        "ts": "2024-01-26T14:20:00Z",
+        "ms_played": 212000,
+        "master_metadata_track_name": "Look What You Made Me Do",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "reputation",
+        "spotify_track_uri": "spotify:track:1P17dC1amhFzptugyAO7Il",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-26T17:50:30Z",
+        "ms_played": 195000,
+        "master_metadata_track_name": "In My Feelings",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Scorpion",
+        "spotify_track_uri": "spotify:track:2G7V7zsVDxg1yRsu7Ew9RJ",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-27T09:15:00Z",
+        "ms_played": 221000,
+        "master_metadata_track_name": "Overpass Graffiti",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "=",
+        "spotify_track_uri": "spotify:track:5jMvM1Fj8l2ufdQQKcmm7M",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-27T12:40:45Z",
+        "ms_played": 188000,
+        "master_metadata_track_name": "I Feel It Coming",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "Starboy",
+        "spotify_track_uri": "spotify:track:3dhjNA0jGA8vHBQ1VdD6vV",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-27T16:05:20Z",
+        "ms_played": 176000,
+        "master_metadata_track_name": "You Need To Calm Down",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Lover",
+        "spotify_track_uri": "spotify:track:6RRNNciQGZEXnqk8SQ9yv5",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-27T19:30:00Z",
+        "ms_played": 243000,
+        "master_metadata_track_name": "N95",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "Mr. Morale & The Big Steppers",
+        "spotify_track_uri": "spotify:track:4zDbJqFU3hqLw3GBAsXGl8",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-28T08:00:00Z",
+        "ms_played": 235000,
+        "master_metadata_track_name": "Bad Habits",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "=",
+        "spotify_track_uri": "spotify:track:3rmo8F54jFF8OgYsqTxm5d",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-28T11:25:15Z",
+        "ms_played": 208000,
+        "master_metadata_track_name": "Everything I Wanted",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "everything i wanted",
+        "spotify_track_uri": "spotify:track:3ZCTVFBt2Brf31RLEnCkWJ",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-28T14:40:30Z",
+        "ms_played": 192000,
+        "master_metadata_track_name": "Physical",
+        "master_metadata_album_artist_name": "Dua Lipa",
+        "master_metadata_album_album_name": "Future Nostalgia",
+        "spotify_track_uri": "spotify:track:3AzjcOeAmA57TIOr9zF1ZW",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-28T18:05:00Z",
+        "ms_played": 218000,
+        "master_metadata_track_name": "Miss Me More",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "Certified Lover Boy",
+        "spotify_track_uri": "spotify:track:68AJRVpmqejABtUdA8Q2xh",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-29T09:30:00Z",
+        "ms_played": 245000,
+        "master_metadata_track_name": "Sing",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "x (Multiply)",
+        "spotify_track_uri": "spotify:track:4vyPbWZK4xJH1sUhz1KYAg",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-29T12:50:20Z",
+        "ms_played": 189000,
+        "master_metadata_track_name": "Cardigan",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "folklore",
+        "spotify_track_uri": "spotify:track:4R2kfaDFhslZEMJqAFNpdd",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-29T16:15:45Z",
+        "ms_played": 203000,
+        "master_metadata_track_name": "After Hours",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "After Hours",
+        "spotify_track_uri": "spotify:track:2p8IUWQDrpjuFltbdgLOag",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-29T19:40:00Z",
+        "ms_played": 177000,
+        "master_metadata_track_name": "Lost Cause",
+        "master_metadata_album_artist_name": "Billie Eilish",
+        "master_metadata_album_album_name": "Happier Than Ever",
+        "spotify_track_uri": "spotify:track:1l4zPAGAw5UAaQKWPSycn5",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-30T08:45:30Z",
+        "ms_played": 228000,
+        "master_metadata_track_name": "Lego House",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "+ (Plus)",
+        "spotify_track_uri": "spotify:track:6r2K0hFNMmGv7K4Jj8EMZW",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-30T12:10:00Z",
+        "ms_played": 196000,
+        "master_metadata_track_name": "Willow",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "evermore",
+        "spotify_track_uri": "spotify:track:0lx2cLdOt3piY4zzXttJx",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-30T15:35:15Z",
+        "ms_played": 210000,
+        "master_metadata_track_name": "King's Dead",
+        "master_metadata_album_artist_name": "Kendrick Lamar",
+        "master_metadata_album_album_name": "Black Panther The Album",
+        "spotify_track_uri": "spotify:track:2P4AJqYvvbRzFfKsXffJuz",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-30T19:00:00Z",
+        "ms_played": 185000,
+        "master_metadata_track_name": "Break My Heart",
+        "master_metadata_album_artist_name": "Dua Lipa",
+        "master_metadata_album_album_name": "Future Nostalgia",
+        "spotify_track_uri": "spotify:track:56jnPqoRbMQa7Lpb9v9ILj",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-31T09:20:00Z",
+        "ms_played": 252000,
+        "master_metadata_track_name": "Shape of You",
+        "master_metadata_album_artist_name": "Ed Sheeran",
+        "master_metadata_album_album_name": "÷ (Divide)",
+        "spotify_track_uri": "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-31T12:45:30Z",
+        "ms_played": 198000,
+        "master_metadata_track_name": "Midnight Rain",
+        "master_metadata_album_artist_name": "Taylor Swift",
+        "master_metadata_album_album_name": "Midnights",
+        "spotify_track_uri": "spotify:track:3rWDp9tBPQR9z6U5YyRSK4",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-31T16:10:45Z",
+        "ms_played": 221000,
+        "master_metadata_track_name": "Out of Time",
+        "master_metadata_album_artist_name": "The Weeknd",
+        "master_metadata_album_album_name": "Dawn FM",
+        "spotify_track_uri": "spotify:track:2SLwbpExuoBDZBpjfefCtV",
+        "reason_start": "clickrow",
+        "reason_end": "trackdone"
+    },
+    {
+        "ts": "2024-01-31T19:35:00Z",
+        "ms_played": 207000,
+        "master_metadata_track_name": "Wait For U",
+        "master_metadata_album_artist_name": "Drake",
+        "master_metadata_album_album_name": "I NEVER LIKED YOU",
+        "spotify_track_uri": "spotify:track:2BtoQk8QwWrY4iNSfVfQ3s",
+        "reason_start": "trackdone",
+        "reason_end": "trackdone"
+    }
+]

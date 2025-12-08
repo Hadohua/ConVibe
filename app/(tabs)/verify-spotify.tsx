@@ -1,9 +1,10 @@
 /**
- * app/(tabs)/verify-spotify.tsx - Spotify 验证页面 V2
+ * app/(tabs)/verify-spotify.tsx - Spotify 验证页面 V3
  * 
- * 支持两种验证方式：
- * 1. Reclaim Protocol (zkProof) - 推荐，隐私保护
- * 2. OAuth 直连 - 备用方案
+ * 支持三种验证方式：
+ * 1. OAuth 直连 - 快速便捷
+ * 2. 数据导入 - 精确统计（类似 stats.fm）
+ * 3. Reclaim Protocol (zkProof) - 隐私保护
  * 
  * 验证成功后可铸造分层音乐徽章 SBT
  */
@@ -12,9 +13,12 @@ import { useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import SpotifyVerifier, { type VerificationResult } from "../../components/SpotifyVerifier";
 import SpotifyConnector from "../../components/SpotifyConnector";
+import SpotifyDataImport from "../../components/SpotifyDataImport";
 import MintBadgeButton from "../../components/MintBadgeButton";
 import UserBadges from "../../components/UserBadges";
 import type { SpotifyTokens } from "../../lib/spotify/spotify-auth";
+import type { StreamingStats } from "../../lib/spotify/streaming-history-parser";
+import { calculateTierFromPlaytime } from "../../lib/spotify/streaming-history-parser";
 import { TIER, type TierLevel } from "../../lib/consensus/tier-calculator";
 
 interface SpotifyData {
@@ -30,12 +34,14 @@ interface SpotifyData {
     topGenres: string[];
 }
 
+type VerifyMethod = "oauth" | "import" | "reclaim";
+
 /**
- * VerifySpotifyScreen - Spotify 验证页面 V2
+ * VerifySpotifyScreen - Spotify 验证页面 V3
  */
 export default function VerifySpotifyScreen() {
-    // 验证方式：reclaim | oauth (默认 OAuth，因为更稳定)
-    const [verifyMethod, setVerifyMethod] = useState<"reclaim" | "oauth">("oauth");
+    // 验证方式：oauth | import | reclaim (默认 OAuth)
+    const [verifyMethod, setVerifyMethod] = useState<VerifyMethod>("oauth");
 
     // Reclaim 验证结果
     const [reclaimResult, setReclaimResult] = useState<VerificationResult | null>(null);
@@ -43,6 +49,9 @@ export default function VerifySpotifyScreen() {
     // OAuth 验证结果
     const [oauthConnected, setOauthConnected] = useState(false);
     const [oauthData, setOauthData] = useState<SpotifyData | null>(null);
+
+    // 数据导入结果
+    const [importedStats, setImportedStats] = useState<StreamingStats | null>(null);
 
     // 铸造状态
     const [mintSuccess, setMintSuccess] = useState(false);
@@ -54,6 +63,12 @@ export default function VerifySpotifyScreen() {
         }
         if (verifyMethod === "oauth" && oauthData?.topGenres) {
             return oauthData.topGenres;
+        }
+        // 导入方式没有流派数据，使用默认的流派列表供用户选择
+        // MVP: 根据播放量推断用户可能喜欢的流派（默认 pop/indie）
+        if (verifyMethod === "import" && importedStats) {
+            // 返回有效的流派名称（可以被 getGenreIds 识别）
+            return ["pop", "indie"];
         }
         return [];
     };
@@ -68,12 +83,18 @@ export default function VerifySpotifyScreen() {
             if (popularity >= 80) return TIER.OG;
             if (popularity >= 50) return TIER.VETERAN;
         }
+        // 导入方式：根据 top artist 播放时长计算
+        if (verifyMethod === "import" && importedStats?.topArtists?.[0]) {
+            const hours = importedStats.topArtists[0].totalHours;
+            return calculateTierFromPlaytime(hours);
+        }
         return TIER.ENTRY;
     };
 
-    const isVerified = verifyMethod === "reclaim"
-        ? reclaimResult !== null
-        : oauthConnected && oauthData !== null;
+    const isVerified =
+        (verifyMethod === "reclaim" && reclaimResult !== null) ||
+        (verifyMethod === "oauth" && oauthConnected && oauthData !== null) ||
+        (verifyMethod === "import" && importedStats !== null);
 
     const genres = getCurrentGenres();
     const tier = getCurrentTier();
@@ -89,6 +110,12 @@ export default function VerifySpotifyScreen() {
         console.log("OAuth 连接完成:", data);
         setOauthConnected(true);
         setOauthData(data);
+    };
+
+    // 数据导入完成
+    const handleImportComplete = (stats: StreamingStats) => {
+        console.log("数据导入完成:", stats);
+        setImportedStats(stats);
     };
 
     // 用于强制刷新 UserBadges
@@ -107,6 +134,7 @@ export default function VerifySpotifyScreen() {
         setReclaimResult(null);
         setOauthConnected(false);
         setOauthData(null);
+        setImportedStats(null);
         setMintSuccess(false);
     };
 
@@ -130,21 +158,29 @@ export default function VerifySpotifyScreen() {
                 {!isVerified && !mintSuccess && (
                     <View className="bg-dark-200 rounded-xl p-4 mb-6">
                         <Text className="text-gray-400 text-sm mb-3">选择验证方式</Text>
-                        <View className="flex-row gap-3">
+                        <View className="flex-row flex-wrap gap-2">
                             <Pressable
-                                onPress={() => setVerifyMethod("reclaim")}
-                                className={`flex-1 py-3 rounded-lg ${verifyMethod === "reclaim" ? "bg-primary-600" : "bg-dark-50"}`}
+                                onPress={() => setVerifyMethod("oauth")}
+                                className={`flex-1 min-w-[30%] py-3 rounded-lg ${verifyMethod === "oauth" ? "bg-green-600" : "bg-dark-50"}`}
                             >
-                                <Text className={`text-center font-medium ${verifyMethod === "reclaim" ? "text-white" : "text-gray-400"}`}>
-                                    🔒 Reclaim (推荐)
+                                <Text className={`text-center font-medium text-sm ${verifyMethod === "oauth" ? "text-white" : "text-gray-400"}`}>
+                                    🔗 OAuth
                                 </Text>
                             </Pressable>
                             <Pressable
-                                onPress={() => setVerifyMethod("oauth")}
-                                className={`flex-1 py-3 rounded-lg ${verifyMethod === "oauth" ? "bg-primary-600" : "bg-dark-50"}`}
+                                onPress={() => setVerifyMethod("import")}
+                                className={`flex-1 min-w-[30%] py-3 rounded-lg ${verifyMethod === "import" ? "bg-purple-600" : "bg-dark-50"}`}
                             >
-                                <Text className={`text-center font-medium ${verifyMethod === "oauth" ? "text-white" : "text-gray-400"}`}>
-                                    🔗 OAuth
+                                <Text className={`text-center font-medium text-sm ${verifyMethod === "import" ? "text-white" : "text-gray-400"}`}>
+                                    📊 导入
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => setVerifyMethod("reclaim")}
+                                className={`flex-1 min-w-[30%] py-3 rounded-lg ${verifyMethod === "reclaim" ? "bg-primary-600" : "bg-dark-50"}`}
+                            >
+                                <Text className={`text-center font-medium text-sm ${verifyMethod === "reclaim" ? "text-white" : "text-gray-400"}`}>
+                                    🔒 Reclaim
                                 </Text>
                             </Pressable>
                         </View>
@@ -154,15 +190,22 @@ export default function VerifySpotifyScreen() {
                 {/* 验证组件 */}
                 {!isVerified && !mintSuccess && (
                     <View className="mb-6">
-                        {verifyMethod === "reclaim" ? (
-                            <SpotifyVerifier
-                                onVerificationComplete={handleReclaimComplete}
-                                onError={(err) => console.error("Reclaim 错误:", err)}
-                            />
-                        ) : (
+                        {verifyMethod === "oauth" && (
                             <SpotifyConnector
                                 onConnect={handleOAuthConnect}
                                 onDisconnect={handleReset}
+                            />
+                        )}
+                        {verifyMethod === "import" && (
+                            <SpotifyDataImport
+                                onImportComplete={handleImportComplete}
+                                onError={(err) => console.error("导入错误:", err)}
+                            />
+                        )}
+                        {verifyMethod === "reclaim" && (
+                            <SpotifyVerifier
+                                onVerificationComplete={handleReclaimComplete}
+                                onError={(err) => console.error("Reclaim 错误:", err)}
                             />
                         )}
                     </View>
