@@ -11,7 +11,8 @@
 
 import { useState, useCallback } from "react";
 import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
-import { encodeFunctionData, formatEther, parseEther } from "viem";
+import { encodeFunctionData, formatEther, parseEther, toHex } from "viem";
+import type { Proof } from "@reclaimprotocol/reactnative-sdk";
 import {
     publicClient,
     MUSIC_CONSENSUS_SBT_ADDRESS,
@@ -55,8 +56,9 @@ export interface UseMintSBTReturn {
     error: string | null;
     mintedGenres: number[];
     faucetUrl: string;
-    mint: (genres: string[], tier?: TierLevel) => Promise<MintResult>;
+    mint: (genres: string[], tier?: TierLevel, proof?: Proof) => Promise<MintResult>;
     mintTiered: (genreIds: number[], tiers: number[]) => Promise<MintResult>;
+    mintWithProof: (genreIds: number[], tiers: number[], proof: Proof) => Promise<MintResult>;
     refreshBadge: (genreId: number, newTier: TierLevel) => Promise<MintResult>;
     checkBalance: () => Promise<string>;
     getUserBadges: () => Promise<number[]>;
@@ -72,6 +74,45 @@ const MIN_GAS_BALANCE = parseEther("0.0001"); // 0.0001 ETH
 
 // Base Sepolia Chain ID
 const BASE_SEPOLIA_CHAIN_ID = 84532;
+
+// ============================================
+// Proof 转换辅助函数
+// ============================================
+
+/**
+ * 将 Reclaim Proof 转换为合约所需的格式
+ */
+function transformProofForContract(proof: Proof) {
+    // 解析 context 获取 contextAddress 和 contextMessage
+    let contextAddress = "";
+    let contextMessage = "";
+    try {
+        if (proof.claimData?.context) {
+            const contextData = JSON.parse(proof.claimData.context);
+            contextAddress = contextData.contextAddress || "";
+            contextMessage = contextData.contextMessage || "";
+        }
+    } catch {
+        console.warn("Failed to parse proof context");
+    }
+
+    return {
+        claimInfo: {
+            provider: proof.claimData?.provider || "",
+            parameters: proof.claimData?.parameters || "",
+            context: proof.claimData?.context || "",
+        },
+        signedClaim: {
+            claim: {
+                identifier: proof.identifier as `0x${string}`,
+                owner: (proof.claimData?.owner || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+                timestampS: proof.claimData?.timestampS || 0,
+                epoch: proof.claimData?.epoch || 0,
+            },
+            signatures: proof.signatures?.map(sig => sig as `0x${string}`) || [],
+        },
+    };
+}
 
 // ============================================
 // useMintSBT Hook
@@ -357,10 +398,168 @@ export function useMintSBT(): UseMintSBTReturn {
     );
 
     /**
-     * 旧版铸造 (兼容，使用传入的 tier)
+     * V3 链上验证铸造 (使用 Reclaim Proof)
+     */
+    const mintWithProof = useCallback(
+        async (genreIds: number[], tiers: number[], proof: Proof): Promise<MintResult> => {
+            try {
+                if (!wallet.account?.address) {
+                    throw new Error("钱包未连接");
+                }
+
+                if (wallet.status !== "connected") {
+                    throw new Error("钱包未就绪");
+                }
+
+                if (genreIds.length !== tiers.length) {
+                    throw new Error("流派和等级数组长度不匹配");
+                }
+
+                setStatus("checking");
+                setError(null);
+
+                const userAddress = wallet.account.address as `0x${string}`;
+
+                // 检查余额
+                const balance = await publicClient.getBalance({ address: userAddress });
+
+                if (balance < MIN_GAS_BALANCE) {
+                    setStatus("insufficient-gas");
+                    setError(`余额不足，请先获取测试 ETH`);
+                    return {
+                        status: "insufficient-gas",
+                        error: "余额不足",
+                    };
+                }
+
+                // 检查哪些徽章还没有
+                const existingBadges = await getUserBadges();
+                const newGenreIds: number[] = [];
+                const newTiers: number[] = [];
+
+                for (let i = 0; i < genreIds.length; i++) {
+                    if (!existingBadges.includes(genreIds[i])) {
+                        newGenreIds.push(genreIds[i]);
+                        newTiers.push(tiers[i]);
+                    }
+                }
+
+                if (newGenreIds.length === 0) {
+                    setStatus("success");
+                    setMintedGenres(genreIds);
+                    return {
+                        status: "success",
+                        mintedGenres: genreIds,
+                        mintedTiers: tiers,
+                    };
+                }
+
+                setStatus("minting");
+
+                const provider = await wallet.getProvider();
+                await ensureNetwork(provider);
+
+                // 转换 Proof 为合约格式
+                const proofData = transformProofForContract(proof);
+
+                console.log("Proof data for contract:", JSON.stringify(proofData, null, 2));
+
+                // 编码调用数据
+                let data: `0x${string}`;
+
+                if (newGenreIds.length === 1) {
+                    // 单个铸造
+                    data = encodeFunctionData({
+                        abi: MusicConsensusSBTAbi,
+                        functionName: "mintWithProof",
+                        args: [proofData, BigInt(newGenreIds[0]), newTiers[0]],
+                    });
+                } else {
+                    // 批量铸造
+                    data = encodeFunctionData({
+                        abi: MusicConsensusSBTAbi,
+                        functionName: "mintBatchWithProof",
+                        args: [proofData, newGenreIds.map(BigInt), newTiers],
+                    });
+                }
+
+                // 估算 gas (带备用值)
+                let gasLimit: bigint;
+                try {
+                    const gasEstimate = await publicClient.estimateGas({
+                        account: userAddress,
+                        to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                        data: data,
+                    });
+                    // 增加 50% 缓冲
+                    gasLimit = (gasEstimate * 150n) / 100n;
+                    console.log("Gas 估算:", gasEstimate, "->", gasLimit);
+                } catch (gasError) {
+                    console.warn("Gas 估算失败，使用固定值:", gasError);
+                    gasLimit = 300000n; // Proof 验证需要更多 gas
+                }
+
+                if (gasLimit === 0n) {
+                    gasLimit = 300000n;
+                }
+
+                const feeData = await publicClient.estimateFeesPerGas();
+                const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
+                console.log("Gas 费用:", { gasLimit, maxFeePerGas, maxPriorityFeePerGas });
+
+                // 发送交易
+                const hash = await provider.request({
+                    method: "eth_sendTransaction",
+                    params: [{
+                        from: userAddress,
+                        to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                        data: data,
+                        gasLimit: `0x${gasLimit.toString(16)}`,
+                        maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                        maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
+                    }],
+                }) as `0x${string}`;
+
+                setTxHash(hash);
+
+                // 等待确认
+                const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+                if (receipt.status === "success") {
+                    setStatus("success");
+                    setMintedGenres(newGenreIds);
+                    return {
+                        status: "success",
+                        txHash: hash,
+                        mintedGenres: newGenreIds,
+                        mintedTiers: newTiers,
+                    };
+                } else {
+                    throw new Error("交易失败");
+                }
+            } catch (err) {
+                console.error("链上验证铸造失败:", err);
+                const errorMessage = err instanceof Error ? err.message : "未知错误";
+                setStatus("error");
+                setError(errorMessage);
+                return {
+                    status: "error",
+                    error: errorMessage,
+                };
+            }
+        },
+        [wallet, getUserBadges, ensureNetwork]
+    );
+
+    /**
+     * 通用铸造函数 (V3: 支持 Proof)
+     * - 有 proof: 调用 mintWithProof (链上验证)
+     * - 无 proof: 调用 mintTiered (向后兼容 OAuth/Import)
      */
     const mint = useCallback(
-        async (genres: string[], tier: TierLevel = TIER.ENTRY): Promise<MintResult> => {
+        async (genres: string[], tier: TierLevel = TIER.ENTRY, proof?: Proof): Promise<MintResult> => {
             const genreIds = getGenreIds(genres);
 
             if (genreIds.length === 0) {
@@ -373,9 +572,17 @@ export function useMintSBT(): UseMintSBTReturn {
             // 所有流派使用相同 tier
             const tiers = genreIds.map(() => tier);
 
+            // V3: 如果有 Proof，使用链上验证
+            if (proof) {
+                console.log("使用 Reclaim Proof 链上验证铸造");
+                return mintWithProof(genreIds, tiers, proof);
+            }
+
+            // 否则使用旧版铸造 (向后兼容)
+            console.log("使用旧版铸造 (无 Proof)");
             return mintTiered(genreIds, tiers);
         },
-        [mintTiered]
+        [mintTiered, mintWithProof]
     );
 
     /**
@@ -483,6 +690,7 @@ export function useMintSBT(): UseMintSBTReturn {
         faucetUrl: FAUCET_URL,
         mint,
         mintTiered,
+        mintWithProof,
         refreshBadge,
         checkBalance,
         getUserBadges,

@@ -1,0 +1,90 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "IReclaimVerifier",
+  "sourceName": "contracts/IReclaimVerifier.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "provider",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "parameters",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "context",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct ClaimInfo",
+              "name": "claimInfo",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "components": [
+                    {
+                      "internalType": "bytes32",
+                      "name": "identifier",
+                      "type": "bytes32"
+                    },
+                    {
+                      "internalType": "address",
+                      "name": "owner",
+                      "type": "address"
+                    },
+                    {
+                      "internalType": "uint32",
+                      "name": "timestampS",
+                      "type": "uint32"
+                    },
+                    {
+                      "internalType": "uint32",
+                      "name": "epoch",
+                      "type": "uint32"
+                    }
+                  ],
+                  "internalType": "struct CompleteClaimData",
+                  "name": "claim",
+                  "type": "tuple"
+                },
+                {
+                  "internalType": "bytes[]",
+                  "name": "signatures",
+                  "type": "bytes[]"
+                }
+              ],
+              "internalType": "struct SignedClaim",
+              "name": "signedClaim",
+              "type": "tuple"
+            }
+          ],
+          "internalType": "struct Proof",
+          "name": "proof",
+          "type": "tuple"
+        }
+      ],
+      "name": "verifyProof",
+      "outputs": [],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/IReclaimVerifier.sol",
+  "buildInfoId": "solc-0_8_20-ddccee04daece4e773b4fb4547024aea3926184c"
+}

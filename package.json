@@ -60,6 +60,5 @@
     "hardhat": "^3.0.17",
     "typescript": "~5.9.2"
   },
-  "private": true,
-  "type": "module"
+  "private": true
 }

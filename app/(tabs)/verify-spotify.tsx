@@ -260,13 +260,13 @@ export default function VerifySpotifyScreen() {
                                         key={genre.id}
                                         onPress={() => toggleGenre(genre.id)}
                                         className={`px-4 py-2 rounded-full border ${selectedGenres.includes(genre.id)
-                                                ? "bg-purple-600 border-purple-500"
-                                                : "bg-dark-50 border-dark-50"
+                                            ? "bg-purple-600 border-purple-500"
+                                            : "bg-dark-50 border-dark-50"
                                             }`}
                                     >
                                         <Text className={`text-sm ${selectedGenres.includes(genre.id)
-                                                ? "text-white"
-                                                : "text-gray-400"
+                                            ? "text-white"
+                                            : "text-gray-400"
                                             }`}>
                                             {genre.emoji} {genre.name}
                                         </Text>
@@ -321,6 +321,7 @@ export default function VerifySpotifyScreen() {
                         <MintBadgeButton
                             genres={genres}
                             suggestedTier={tier}
+                            proof={verifyMethod === "reclaim" ? reclaimResult?.proof ?? undefined : undefined}
                             onSuccess={handleMintSuccess}
                             onError={(error) => console.error("铸造失败:", error)}
                         />

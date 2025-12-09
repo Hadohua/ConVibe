@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
+import type { Proof } from "@reclaimprotocol/reactnative-sdk";
 import { useMintSBT } from "../hooks/useMintSBT";
 import { TIER, getTierInfo, type TierLevel } from "../lib/consensus/tier-calculator";
 
@@ -18,6 +19,8 @@ interface MintBadgeButtonProps {
     genres: string[];
     /** 建议的等级 (来自 SpotifyVerifier) */
     suggestedTier?: TierLevel;
+    /** Reclaim Proof 对象 (用于链上验证) */
+    proof?: Proof;
     /** 铸造成功回调 */
     onSuccess?: (txHash: string, mintedGenres: number[]) => void;
     /** 铸造失败回调 */
@@ -48,6 +51,7 @@ const GENRE_NAMES: Record<number, string> = {
 export default function MintBadgeButton({
     genres,
     suggestedTier = TIER.ENTRY,
+    proof,
     onSuccess,
     onError,
 }: MintBadgeButtonProps) {
@@ -86,8 +90,8 @@ export default function MintBadgeButton({
         if (disabled || genres.length === 0) return;
         setDisabled(true);
 
-        // 调用 mint，传入 tier
-        await mint(genres, suggestedTier);
+        // 调用 mint，传入 tier 和 proof (如果有)
+        await mint(genres, suggestedTier, proof);
 
         setDisabled(false);
     };
