@@ -55,10 +55,10 @@ export default function GatedContentOverlay({
     const tierName = TIER_NAMES[requiredTier] || `Tier ${requiredTier}`;
 
     /**
-     * 跳转到验证页面
+     * 跳转到验证页面 (音乐 Vibe 详情页)
      */
     const handleGoToVerify = () => {
-        router.push("/verify-spotify");
+        router.push("/music-vibe-detail");
     };
 
     return (

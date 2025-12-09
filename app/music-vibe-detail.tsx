@@ -18,6 +18,8 @@ import SpotifyStats from "../components/SpotifyStats";
 import MintBadgeButton from "../components/MintBadgeButton";
 import UserBadges from "../components/UserBadges";
 import ConsensusFeed from "../components/ConsensusFeed";
+import CVIBBalanceCard from "../components/CVIBBalanceCard";
+import { calculateCVIBFromStats } from "../lib/consensus/tier-calculator";
 import type { StreamingStats } from "../lib/spotify/streaming-history-parser";
 import type { SpotifyTokens } from "../lib/spotify/spotify-auth";
 import { calculateTierFromPlaytime } from "../lib/spotify/streaming-history-parser";
@@ -160,8 +162,26 @@ export default function MusicVibeDetail() {
     }, []);
 
     // 渲染验证 Tab
+    // 计算预估可获得的 $CVIB
+    const getEstimatedCVIB = (): number | undefined => {
+        if (verifyMethod === "import" && importedStats) {
+            const result = calculateCVIBFromStats({
+                totalHours: importedStats.totalHours,
+                topArtists: importedStats.topArtists,
+            });
+            return result.totalCVIB;
+        }
+        return undefined;
+    };
+
     const renderVerifyTab = () => (
         <View style={styles.tabContent}>
+            {/* $CVIB 余额卡片 */}
+            <CVIBBalanceCard
+                refreshKey={badgeRefreshKey}
+                estimatedCVIB={isVerified ? getEstimatedCVIB() : undefined}
+            />
+
             {/* 我的徽章 */}
             <View style={styles.badgesSection}>
                 <UserBadges key={`badges-${badgeRefreshKey}`} />
@@ -307,12 +327,64 @@ export default function MusicVibeDetail() {
     // 渲染统计 Tab
     const renderStatsTab = () => (
         <View style={styles.tabContent}>
+            {/* 有导入数据时显示完整统计 */}
             {importedStats ? (
                 <>
-                    <Text style={styles.tabDescription}>你的 Spotify 听歌统计数据</Text>
+                    <View style={styles.dataSourceBadge}>
+                        <Text style={styles.dataSourceText}>📊 数据来源: Spotify 数据导出</Text>
+                    </View>
                     <SpotifyStats stats={importedStats} showFullDetails />
                 </>
+            ) : oauthData && oauthConnected ? (
+                /* OAuth 连接但未导入时显示简要数据 */
+                <>
+                    <View style={styles.dataSourceBadge}>
+                        <Text style={styles.dataSourceText}>🔗 数据来源: Spotify OAuth</Text>
+                    </View>
+                    <View style={styles.oauthStatsCard}>
+                        <Text style={styles.oauthStatsTitle}>
+                            {oauthData.profile?.display_name || '用户'} 的音乐偏好
+                        </Text>
+
+                        {/* Top 流派 */}
+                        {oauthData.topGenres && oauthData.topGenres.length > 0 && (
+                            <View style={styles.oauthSection}>
+                                <Text style={styles.oauthSectionLabel}>热门流派</Text>
+                                <View style={styles.genreChips}>
+                                    {oauthData.topGenres.slice(0, 5).map((genre, i) => (
+                                        <View key={i} style={styles.genreChip}>
+                                            <Text style={styles.genreChipText}>{genre}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Top 艺人 */}
+                        {oauthData.topArtists && oauthData.topArtists.length > 0 && (
+                            <View style={styles.oauthSection}>
+                                <Text style={styles.oauthSectionLabel}>热门艺人</Text>
+                                {oauthData.topArtists.slice(0, 5).map((artist, i) => (
+                                    <View key={i} style={styles.oauthArtistRow}>
+                                        <Text style={styles.oauthArtistRank}>#{i + 1}</Text>
+                                        <Text style={styles.oauthArtistName}>{artist.name}</Text>
+                                        <Text style={styles.oauthArtistPop}>🔥 {artist.popularity}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+
+                    {/* 提示导入获取更多数据 */}
+                    <View style={styles.importPrompt}>
+                        <Text style={styles.importPromptText}>
+                            💡 导入 Spotify 数据包可获取详细的听歌时长和更准确的统计
+                        </Text>
+                        <SpotifyDataImport onImportComplete={handleImportComplete} />
+                    </View>
+                </>
             ) : (
+                /* 未验证时显示导入入口 */
                 <>
                     <Text style={styles.tabDescription}>
                         导入 Spotify 数据包，解锁详细统计和高级徽章
@@ -464,4 +536,21 @@ const styles = StyleSheet.create({
     genreTagText: { color: "#a78bfa", fontSize: 14, textTransform: "capitalize" },
     resetButton: { marginTop: 16, paddingVertical: 10 },
     resetButtonText: { color: "#71717a", textAlign: "center", fontSize: 14 },
+
+    // 统计 Tab 样式
+    dataSourceBadge: { backgroundColor: "#27272a", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 12, alignSelf: "flex-start" },
+    dataSourceText: { color: "#a1a1aa", fontSize: 12 },
+    oauthStatsCard: { backgroundColor: "#18181b", borderRadius: 16, padding: 16, marginBottom: 16 },
+    oauthStatsTitle: { color: "#ffffff", fontSize: 18, fontWeight: "600", marginBottom: 16 },
+    oauthSection: { marginBottom: 16 },
+    oauthSectionLabel: { color: "#a1a1aa", fontSize: 14, marginBottom: 8 },
+    genreChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    genreChip: { backgroundColor: "rgba(139, 92, 246, 0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.3)" },
+    genreChipText: { color: "#a78bfa", fontSize: 13, textTransform: "capitalize" },
+    oauthArtistRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#27272a" },
+    oauthArtistRank: { color: "#71717a", fontSize: 14, width: 32 },
+    oauthArtistName: { color: "#ffffff", fontSize: 14, flex: 1 },
+    oauthArtistPop: { color: "#f97316", fontSize: 12 },
+    importPrompt: { backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.2)" },
+    importPromptText: { color: "#a78bfa", fontSize: 13, marginBottom: 12 },
 });

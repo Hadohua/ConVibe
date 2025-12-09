@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
 import type { Proof } from "@reclaimprotocol/reactnative-sdk";
 import { useMintSBT } from "../hooks/useMintSBT";
-import { TIER, getTierInfo, type TierLevel } from "../lib/consensus/tier-calculator";
+import { TIER, getTierInfo, CVIB_TIER_COST, type TierLevel } from "../lib/consensus/tier-calculator";
 
 // ============================================
 // 类型定义
@@ -61,13 +61,21 @@ export default function MintBadgeButton({
         error,
         mintedGenres,
         faucetUrl,
+        cvibBalance,
         mint,
+        getCVIBBalance,
         reset,
     } = useMintSBT();
 
     const [disabled, setDisabled] = useState(false);
 
     const tierInfo = getTierInfo(suggestedTier);
+    const cvibCost = CVIB_TIER_COST[suggestedTier] || 0;
+
+    // 加载时获取 $CVIB 余额
+    useEffect(() => {
+        getCVIBBalance();
+    }, [getCVIBBalance]);
 
     // 成功回调
     useEffect(() => {
@@ -111,7 +119,7 @@ export default function MintBadgeButton({
     if (status === "idle") {
         return (
             <View>
-                {/* 显示即将铸造的等级 */}
+                {/* 显示即将铸造的等级和成本 */}
                 <View
                     className="rounded-xl p-3 mb-3 flex-row items-center justify-between"
                     style={{ backgroundColor: `${tierInfo.glowColor}` }}
@@ -120,6 +128,11 @@ export default function MintBadgeButton({
                         <Text className="text-xl mr-2">{tierInfo.emoji}</Text>
                         <Text className="text-gray-300">
                             将铸造 <Text style={{ color: tierInfo.color }} className="font-bold">{tierInfo.name}</Text> 级徽章
+                        </Text>
+                    </View>
+                    <View className="bg-black/20 px-2 py-1 rounded-lg">
+                        <Text className="text-gray-200 text-sm">
+                            💎 {cvibCost} CVIB
                         </Text>
                     </View>
                 </View>
@@ -138,6 +151,9 @@ export default function MintBadgeButton({
                             铸造音乐徽章
                         </Text>
                     </View>
+                    <Text className="text-white/70 text-center text-sm mt-1">
+                        需要销毁 {cvibCost} $CVIB
+                    </Text>
                 </Pressable>
             </View>
         );
@@ -174,6 +190,49 @@ export default function MintBadgeButton({
                 <Pressable onPress={reset} className="mt-3">
                     <Text className="text-gray-400 text-center text-sm">重试</Text>
                 </Pressable>
+            </View>
+        );
+    }
+
+    // $CVIB 不足
+    if (status === "insufficient-cvib") {
+        return (
+            <View className="bg-purple-900/30 rounded-xl p-4 border border-purple-700/50">
+                <Text className="text-purple-400 font-semibold mb-2">💎 $CVIB 不足</Text>
+                <Text className="text-gray-300 text-sm mb-3">
+                    铸造 {tierInfo.emoji} {tierInfo.name} 级徽章需要 {cvibCost} CVIB。
+                    {cvibBalance && (
+                        <Text>当前余额: {parseFloat(cvibBalance).toFixed(0)} CVIB</Text>
+                    )}
+                </Text>
+                <View className="bg-purple-800/30 rounded-lg p-3 mb-3">
+                    <Text className="text-purple-300 text-sm">
+                        💡 如何获取 $CVIB？
+                    </Text>
+                    <Text className="text-gray-400 text-xs mt-1">
+                        通过验证 Spotify 数据并导入收听记录，根据你的听歌时长获得 $CVIB 奖励。
+                    </Text>
+                </View>
+                <Pressable onPress={reset} className="mt-2">
+                    <Text className="text-gray-400 text-center text-sm">返回</Text>
+                </Pressable>
+            </View>
+        );
+    }
+
+    // 授权 $CVIB 中
+    if (status === "approving") {
+        return (
+            <View className="bg-purple-900/30 py-6 rounded-xl border border-purple-700/50">
+                <View className="items-center">
+                    <ActivityIndicator size="large" color="#9333ea" />
+                    <Text className="text-purple-400 mt-4 font-semibold">
+                        正在授权 $CVIB...
+                    </Text>
+                    <Text className="text-gray-400 text-sm mt-2">
+                        请在钱包中确认授权交易
+                    </Text>
+                </View>
             </View>
         );
     }
