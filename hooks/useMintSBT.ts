@@ -1,9 +1,12 @@
 /**
- * hooks/useMintSBT.ts - SBT 铸造 Hook V2
+ * hooks/useMintSBT.ts - SBT 铸造 Hook V3
  * 
  * 使用 Privy 嵌入式钱包调用 MusicConsensusSBT 合约铸造分层徽章
  * 
- * V2 新增：
+ * V3 新增：
+ * - mintWithCVIB: 销毁 $CVIB 铸造徽章
+ * - getCVIBBalance: 获取用户 $CVIB 余额
+ * - approveCVIB: 授权合约使用 $CVIB
  * - 支持 mintTieredBadge (带等级参数)
  * - 支持 refreshBadge (刷新验证)
  * - 返回徽章详细信息包含等级和状态
@@ -16,10 +19,11 @@ import type { Proof } from "@reclaimprotocol/reactnative-sdk";
 import {
     publicClient,
     MUSIC_CONSENSUS_SBT_ADDRESS,
+    VIBE_TOKEN_ADDRESS,
     FAUCET_URL,
 } from "../lib/web3/client";
-import { MusicConsensusSBTAbi, getGenreIds, TIER } from "../lib/web3/abi";
-import type { TierLevel } from "../lib/consensus/tier-calculator";
+import { MusicConsensusSBTAbi, VibeTokenAbi, getGenreIds, TIER } from "../lib/web3/abi";
+import { type TierLevel, CVIB_TIER_COST } from "../lib/consensus/tier-calculator";
 
 // ============================================
 // 类型定义
@@ -29,6 +33,8 @@ export type MintStatus =
     | "idle"
     | "checking"
     | "insufficient-gas"
+    | "insufficient-cvib"
+    | "approving"
     | "minting"
     | "success"
     | "error";
@@ -56,11 +62,14 @@ export interface UseMintSBTReturn {
     error: string | null;
     mintedGenres: number[];
     faucetUrl: string;
+    cvibBalance: string | null;
     mint: (genres: string[], tier?: TierLevel, proof?: Proof) => Promise<MintResult>;
     mintTiered: (genreIds: number[], tiers: number[]) => Promise<MintResult>;
     mintWithProof: (genreIds: number[], tiers: number[], proof: Proof) => Promise<MintResult>;
+    mintWithCVIB: (genreIds: number[], tiers: number[]) => Promise<MintResult>;
     refreshBadge: (genreId: number, newTier: TierLevel) => Promise<MintResult>;
     checkBalance: () => Promise<string>;
+    getCVIBBalance: () => Promise<string>;
     getUserBadges: () => Promise<number[]>;
     getUserBadgesWithDetails: () => Promise<BadgeDetails[]>;
     reset: () => void;
@@ -126,6 +135,7 @@ export function useMintSBT(): UseMintSBTReturn {
     const [txHash, setTxHash] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [mintedGenres, setMintedGenres] = useState<number[]>([]);
+    const [cvibBalance, setCvibBalance] = useState<string | null>(null);
 
     /**
      * 获取用户钱包余额
@@ -140,6 +150,31 @@ export function useMintSBT(): UseMintSBTReturn {
         });
 
         return formatEther(balance);
+    }, [wallet.account?.address]);
+
+    /**
+     * 获取用户 $CVIB 余额
+     */
+    const getCVIBBalance = useCallback(async (): Promise<string> => {
+        if (!wallet.account?.address) {
+            throw new Error("钱包未连接");
+        }
+
+        try {
+            const balance = await publicClient.readContract({
+                address: VIBE_TOKEN_ADDRESS,
+                abi: VibeTokenAbi,
+                functionName: "balanceOf",
+                args: [wallet.account.address as `0x${string}`],
+            });
+
+            const formattedBalance = formatEther(balance as bigint);
+            setCvibBalance(formattedBalance);
+            return formattedBalance;
+        } catch (err) {
+            console.error("获取 $CVIB 余额失败:", err);
+            return "0";
+        }
     }, [wallet.account?.address]);
 
     /**
@@ -554,6 +589,239 @@ export function useMintSBT(): UseMintSBTReturn {
     );
 
     /**
+     * V4 $CVIB 铸造函数
+     * 1. 检查 $CVIB 余额
+     * 2. 授权 SBT 合约使用 $CVIB
+     * 3. 调用 mintWithCVIB 铸造徽章
+     */
+    const mintWithCVIB = useCallback(
+        async (genreIds: number[], tiers: number[]): Promise<MintResult> => {
+            try {
+                if (!wallet.account?.address) {
+                    throw new Error("钱包未连接");
+                }
+
+                if (wallet.status !== "connected") {
+                    throw new Error("钱包未就绪");
+                }
+
+                if (genreIds.length !== tiers.length) {
+                    throw new Error("流派和等级数组长度不匹配");
+                }
+
+                setStatus("checking");
+                setError(null);
+
+                const userAddress = wallet.account.address as `0x${string}`;
+
+                // 检查 ETH 余额
+                const ethBalance = await publicClient.getBalance({ address: userAddress });
+                if (ethBalance < MIN_GAS_BALANCE) {
+                    setStatus("insufficient-gas");
+                    setError("ETH 余额不足，请先获取测试 ETH");
+                    return { status: "insufficient-gas", error: "ETH 余额不足" };
+                }
+
+                // 检查哪些徽章还没有
+                const existingBadges = await getUserBadges();
+                const newGenreIds: number[] = [];
+                const newTiers: number[] = [];
+
+                for (let i = 0; i < genreIds.length; i++) {
+                    if (!existingBadges.includes(genreIds[i])) {
+                        newGenreIds.push(genreIds[i]);
+                        newTiers.push(tiers[i]);
+                    }
+                }
+
+                if (newGenreIds.length === 0) {
+                    setStatus("success");
+                    setMintedGenres(genreIds);
+                    return {
+                        status: "success",
+                        mintedGenres: genreIds,
+                        mintedTiers: tiers,
+                    };
+                }
+
+                // 计算所需 $CVIB 总量
+                let totalCost = 0n;
+                for (const tier of newTiers) {
+                    const tierKey = tier as keyof typeof CVIB_TIER_COST;
+                    totalCost += parseEther(String(CVIB_TIER_COST[tierKey] || 0));
+                }
+
+                // 检查 $CVIB 余额
+                const cvibBalanceRaw = await publicClient.readContract({
+                    address: VIBE_TOKEN_ADDRESS,
+                    abi: VibeTokenAbi,
+                    functionName: "balanceOf",
+                    args: [userAddress],
+                }) as bigint;
+
+                if (cvibBalanceRaw < totalCost) {
+                    setStatus("insufficient-cvib");
+                    setError(`$CVIB 余额不足，需要 ${formatEther(totalCost)} CVIB，当前余额 ${formatEther(cvibBalanceRaw)} CVIB`);
+                    return { status: "insufficient-cvib" as MintStatus, error: "$CVIB 余额不足" };
+                }
+
+                const provider = await wallet.getProvider();
+                await ensureNetwork(provider);
+
+                // 检查授权额度
+                const allowance = await publicClient.readContract({
+                    address: VIBE_TOKEN_ADDRESS,
+                    abi: VibeTokenAbi,
+                    functionName: "allowance",
+                    args: [userAddress, MUSIC_CONSENSUS_SBT_ADDRESS],
+                }) as bigint;
+
+                // 如果授权不足，先授权
+                if (allowance < totalCost) {
+                    setStatus("approving");
+                    console.log("授权 $CVIB...");
+
+                    const approveData = encodeFunctionData({
+                        abi: VibeTokenAbi,
+                        functionName: "approve",
+                        args: [MUSIC_CONSENSUS_SBT_ADDRESS, totalCost],
+                    });
+
+                    const approveHash = await provider.request({
+                        method: "eth_sendTransaction",
+                        params: [{
+                            from: userAddress,
+                            to: VIBE_TOKEN_ADDRESS,
+                            data: approveData,
+                        }],
+                    }) as `0x${string}`;
+
+                    console.log("等待授权确认:", approveHash);
+                    await publicClient.waitForTransactionReceipt({ hash: approveHash });
+                }
+
+                setStatus("minting");
+
+                // 逐个铸造徽章 (或批量)
+                if (newGenreIds.length === 1) {
+                    const mintData = encodeFunctionData({
+                        abi: MusicConsensusSBTAbi,
+                        functionName: "mintWithCVIB",
+                        args: [BigInt(newGenreIds[0]), newTiers[0]],
+                    });
+
+                    let gasLimit: bigint;
+                    try {
+                        const gasEstimate = await publicClient.estimateGas({
+                            account: userAddress,
+                            to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                            data: mintData,
+                        });
+                        gasLimit = (gasEstimate * 150n) / 100n;
+                    } catch {
+                        gasLimit = 300000n;
+                    }
+
+                    const feeData = await publicClient.estimateFeesPerGas();
+                    const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
+                    const hash = await provider.request({
+                        method: "eth_sendTransaction",
+                        params: [{
+                            from: userAddress,
+                            to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                            data: mintData,
+                            gasLimit: `0x${gasLimit.toString(16)}`,
+                            maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                            maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
+                        }],
+                    }) as `0x${string}`;
+
+                    setTxHash(hash);
+                    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+                    if (receipt.status === "success") {
+                        setStatus("success");
+                        setMintedGenres(newGenreIds);
+                        await getCVIBBalance(); // 刷新余额
+                        return {
+                            status: "success",
+                            txHash: hash,
+                            mintedGenres: newGenreIds,
+                            mintedTiers: newTiers,
+                        };
+                    } else {
+                        throw new Error("交易失败");
+                    }
+                } else {
+                    // 批量铸造
+                    const mintData = encodeFunctionData({
+                        abi: MusicConsensusSBTAbi,
+                        functionName: "mintBatchWithCVIB",
+                        args: [newGenreIds.map(BigInt), newTiers],
+                    });
+
+                    let gasLimit: bigint;
+                    try {
+                        const gasEstimate = await publicClient.estimateGas({
+                            account: userAddress,
+                            to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                            data: mintData,
+                        });
+                        gasLimit = (gasEstimate * 150n) / 100n;
+                    } catch {
+                        gasLimit = 500000n;
+                    }
+
+                    const feeData = await publicClient.estimateFeesPerGas();
+                    const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
+                    const hash = await provider.request({
+                        method: "eth_sendTransaction",
+                        params: [{
+                            from: userAddress,
+                            to: MUSIC_CONSENSUS_SBT_ADDRESS,
+                            data: mintData,
+                            gasLimit: `0x${gasLimit.toString(16)}`,
+                            maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                            maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
+                        }],
+                    }) as `0x${string}`;
+
+                    setTxHash(hash);
+                    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+                    if (receipt.status === "success") {
+                        setStatus("success");
+                        setMintedGenres(newGenreIds);
+                        await getCVIBBalance(); // 刷新余额
+                        return {
+                            status: "success",
+                            txHash: hash,
+                            mintedGenres: newGenreIds,
+                            mintedTiers: newTiers,
+                        };
+                    } else {
+                        throw new Error("批量铸造失败");
+                    }
+                }
+            } catch (err) {
+                console.error("$CVIB 铸造失败:", err);
+                const errorMessage = err instanceof Error ? err.message : "未知错误";
+                setStatus("error");
+                setError(errorMessage);
+                return {
+                    status: "error",
+                    error: errorMessage,
+                };
+            }
+        },
+        [wallet, getUserBadges, ensureNetwork, getCVIBBalance]
+    );
+
+    /**
      * 通用铸造函数 (V3: 支持 Proof)
      * - 有 proof: 调用 mintWithProof (链上验证)
      * - 无 proof: 调用 mintTiered (向后兼容 OAuth/Import)
@@ -688,11 +956,14 @@ export function useMintSBT(): UseMintSBTReturn {
         error,
         mintedGenres,
         faucetUrl: FAUCET_URL,
+        cvibBalance,
         mint,
         mintTiered,
         mintWithProof,
+        mintWithCVIB,
         refreshBadge,
         checkBalance,
+        getCVIBBalance,
         getUserBadges,
         getUserBadgesWithDetails,
         reset,

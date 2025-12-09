@@ -27,6 +27,20 @@ export const TIER_THRESHOLDS = {
     OG_MIN: 80,       // OG 最低 popularity
 } as const;
 
+// ============================================
+// $CVIB 代币常量
+// ============================================
+
+/** 每小时听歌奖励的 $CVIB 数量 */
+export const CVIB_PER_HOUR = 10;
+
+/** 各 Tier 需要的 $CVIB 数量 */
+export const CVIB_TIER_COST = {
+    [TIER.ENTRY]: 100,
+    [TIER.VETERAN]: 500,
+    [TIER.OG]: 1000,
+} as const;
+
 /** Tier 显示信息 */
 export const TIER_INFO: Record<TierLevel, {
     name: string;
@@ -177,4 +191,108 @@ export function getDaysUntilExpiry(lastVerifiedTimestamp: number): number {
     const expiryMs = lastVerifiedTimestamp * 1000 + VERIFICATION_VALIDITY_MS;
     const now = Date.now();
     return Math.floor((expiryMs - now) / (24 * 60 * 60 * 1000));
+}
+
+// ============================================
+// $CVIB 计算函数
+// ============================================
+
+/**
+ * 根据收听时长计算应获得的 $CVIB 数量
+ * 
+ * @param hoursListened - 听歌小时数
+ * @returns $CVIB 数量
+ */
+export function calculateCVIBFromListeningTime(hoursListened: number): number {
+    return Math.floor(hoursListened * CVIB_PER_HOUR);
+}
+
+/**
+ * 根据用户的 Spotify 数据计算总 $CVIB
+ * 
+ * @param data - 包含听歌数据的对象
+ * @returns 总 $CVIB 数量
+ */
+export function calculateTotalCVIB(data: {
+    totalHours: number;
+    genreHours?: Record<string, number>;
+}): number {
+    let total = 0;
+
+    // 基础奖励: 总听歌时长
+    total += calculateCVIBFromListeningTime(data.totalHours);
+
+    // 流派专注度奖励 (可选)
+    if (data.genreHours) {
+        for (const hours of Object.values(data.genreHours)) {
+            if (hours >= 50) {
+                total += 50;      // 50小时以上: +50 CVIB 专注奖励
+            } else if (hours >= 20) {
+                total += 20;      // 20小时以上: +20 CVIB 专注奖励
+            }
+        }
+    }
+
+    return total;
+}
+
+/**
+ * 根据 $CVIB 数量计算可铸造的最高 Tier
+ * 
+ * @param cvibAmount - 用户拥有的 $CVIB 数量
+ * @returns 可铸造的最高 Tier，0 表示不够铸造任何 Tier
+ */
+export function getMaxTierForCVIB(cvibAmount: number): TierLevel | 0 {
+    if (cvibAmount >= CVIB_TIER_COST[TIER.OG]) return TIER.OG;
+    if (cvibAmount >= CVIB_TIER_COST[TIER.VETERAN]) return TIER.VETERAN;
+    if (cvibAmount >= CVIB_TIER_COST[TIER.ENTRY]) return TIER.ENTRY;
+    return 0;
+}
+
+/**
+ * 计算铸造指定 Tier 需要的 $CVIB
+ * 
+ * @param tier - 目标 Tier
+ * @returns 所需 $CVIB 数量
+ */
+export function getCVIBCostForTier(tier: TierLevel): number {
+    return CVIB_TIER_COST[tier] || 0;
+}
+
+/**
+ * 根据 StreamingStats 计算用户应获得的 $CVIB
+ * 
+ * @param stats - 流媒体统计数据
+ * @returns CVIB 计算结果
+ */
+export function calculateCVIBFromStats(stats: {
+    totalHours: number;
+    topArtists?: Array<{ totalHours: number }>;
+}): {
+    baseCVIB: number;
+    bonusCVIB: number;
+    totalCVIB: number;
+} {
+    // 基础奖励
+    const baseCVIB = calculateCVIBFromListeningTime(stats.totalHours);
+
+    // 艺术家专注度奖励
+    let bonusCVIB = 0;
+    if (stats.topArtists) {
+        for (const artist of stats.topArtists.slice(0, 10)) { // 前10个艺人
+            if (artist.totalHours >= 20) {
+                bonusCVIB += 30; // 每个深度艺人 +30 CVIB
+            } else if (artist.totalHours >= 10) {
+                bonusCVIB += 15;
+            } else if (artist.totalHours >= 5) {
+                bonusCVIB += 5;
+            }
+        }
+    }
+
+    return {
+        baseCVIB,
+        bonusCVIB,
+        totalCVIB: baseCVIB + bonusCVIB,
+    };
 }

@@ -1,11 +1,180 @@
 /**
- * lib/web3/abi.ts - MusicConsensusSBT V3 合约 ABI
+ * lib/web3/abi.ts - MusicConsensusSBT V4 & VibeToken 合约 ABI
  * 
  * 功能：
+ * - VibeToken ($CVIB) ERC-20 代币
  * - 链上 Reclaim 验证 (V3 核心)
+ * - $CVIB 铸造 (V4 核心)
  * - 分层徽章 (Tiered Badges)
  * - 动态生命周期 (Decay Mechanism)
  */
+
+// ============================================
+// VibeToken ($CVIB) ABI
+// ============================================
+
+export const VibeTokenAbi = [
+    // ERC-20 Standard Functions
+    {
+        name: "balanceOf",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "account", type: "address" }],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+        name: "approve",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+    },
+    {
+        name: "allowance",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+        name: "transfer",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "to", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+    },
+    {
+        name: "totalSupply",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    // Burn Functions
+    {
+        name: "burn",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [{ name: "amount", type: "uint256" }],
+        outputs: [],
+    },
+    {
+        name: "burnFrom",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "account", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [],
+    },
+    // Metadata
+    {
+        name: "name",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "string" }],
+    },
+    {
+        name: "symbol",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "string" }],
+    },
+    {
+        name: "decimals",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint8" }],
+    },
+    // Minting (authorized only)
+    {
+        name: "mint",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "to", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [],
+    },
+    {
+        name: "mintForListening",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "to", type: "address" },
+            { name: "hoursListened", type: "uint256" },
+        ],
+        outputs: [],
+    },
+    // Query Functions
+    {
+        name: "calculateReward",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "hoursListened", type: "uint256" }],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+        name: "rewardPerHour",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+        name: "isMinter",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "minter", type: "address" }],
+        outputs: [{ name: "", type: "bool" }],
+    },
+    // Events
+    {
+        name: "Transfer",
+        type: "event",
+        inputs: [
+            { name: "from", type: "address", indexed: true },
+            { name: "to", type: "address", indexed: true },
+            { name: "value", type: "uint256", indexed: false },
+        ],
+    },
+    {
+        name: "Approval",
+        type: "event",
+        inputs: [
+            { name: "owner", type: "address", indexed: true },
+            { name: "spender", type: "address", indexed: true },
+            { name: "value", type: "uint256", indexed: false },
+        ],
+    },
+    {
+        name: "TokensMinted",
+        type: "event",
+        inputs: [
+            { name: "to", type: "address", indexed: true },
+            { name: "amount", type: "uint256", indexed: false },
+            { name: "reason", type: "string", indexed: false },
+        ],
+    },
+] as const;
+
+// ============================================
+// Reclaim Proof 结构类型
+// ============================================
 
 // Reclaim Proof 结构类型
 const ProofTuple = {
@@ -43,7 +212,81 @@ const ProofTuple = {
 
 export const MusicConsensusSBTAbi = [
     // ============================================
-    // V3 链上验证铸造函数perceiveing
+    // V4 $CVIB 铸造函数 (核心)
+    // ============================================
+
+    // 通过销毁 $CVIB 铸造徽章
+    {
+        name: "mintWithCVIB",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "genreId", type: "uint256" },
+            { name: "tier", type: "uint8" },
+        ],
+        outputs: [],
+    },
+    // 批量通过 $CVIB 铸造
+    {
+        name: "mintBatchWithCVIB",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "genreIds", type: "uint256[]" },
+            { name: "tiers", type: "uint8[]" },
+        ],
+        outputs: [],
+    },
+    // 升级徽章等级 (补差价)
+    {
+        name: "upgradeBadgeWithCVIB",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "genreId", type: "uint256" },
+            { name: "newTier", type: "uint8" },
+        ],
+        outputs: [],
+    },
+    // 获取铸造成本
+    {
+        name: "getMintCost",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "tier", type: "uint8" }],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    // 获取升级成本
+    {
+        name: "getUpgradeCost",
+        type: "function",
+        stateMutability: "view",
+        inputs: [
+            { name: "user", type: "address" },
+            { name: "genreId", type: "uint256" },
+            { name: "newTier", type: "uint8" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    // 获取 Tier 成本
+    {
+        name: "tierCost",
+        type: "function",
+        stateMutability: "view",
+        inputs: [{ name: "tier", type: "uint8" }],
+        outputs: [{ name: "", type: "uint256" }],
+    },
+    // 获取 VibeToken 地址
+    {
+        name: "vibeTokenAddress",
+        type: "function",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "address" }],
+    },
+
+    // ============================================
+    // V3 链上验证铸造函数 (Reclaim Proof)
     // ============================================
 
     // 通过 Reclaim Proof 铸造徽章
