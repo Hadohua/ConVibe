@@ -9,7 +9,7 @@
 
 **基于零知识证明的身份验证 + 灵魂绑定代币的 Web3 社交应用**
 
-[功能介绍](#-功能特性) · [快速开始](#-快速开始) · [技术架构](#-技术架构) · [路线图](#-未来路线图)
+[功能介绍](#-功能特性) · [快速开始](#-快速开始) · [技术架构](#-技术架构) · [经济模型](#-cvib-经济模型) · [路线图](#-未来路线图)
 
 </div>
 
@@ -21,7 +21,7 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
 
 ### 💡 核心理念
 
-> 你的音乐品味，是你灵魂的一部分。我们让它上链，成为你不可转让的数字身份。
+> **你的品味即资产** - 你的音乐品味，是你灵魂的一部分。我们让它上链，成为你不可转让的数字身份。
 
 ---
 
@@ -30,10 +30,37 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
 | 功能 | 描述 |
 |------|------|
 | 🔐 **无感登录** | Google 社交登录，自动创建嵌入式钱包 |
-| 🎵 **Spotify 验证** | 使用 Reclaim Protocol zkTLS 零知识证明验证音乐偏好 |
-| 🏆 **SBT 徽章** | 10 种音乐流派徽章（Pop, Rock, Hip-Hop, R&B, Electronic, Jazz, Classical, Country, Indie, Metal） |
-| 💳 **钱包管理** | 查看钱包地址、复制、链上资产展示 |
-| 🎨 **精美 UI** | 毛玻璃 TabBar、骨架屏加载、品牌色主题 |
+| 🎵 **三重验证** | OAuth / 数据导入 / Reclaim zkTLS 零知识证明 |
+| 💎 **$CVIB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
+| 🏆 **分层 SBT 徽章** | 入门 / 资深 / OG 三级徽章体系 |
+| 📊 **听歌统计** | 导入 Spotify 数据包，查看详细统计 |
+| 🔥 **共识社区** | 基于徽章的门控内容和投票系统 |
+
+---
+
+## 💎 $CVIB 经济模型
+
+ConVibe 引入 **$CVIB (Vibe Token)** 作为平台的核心代币：
+
+### 获取 $CVIB
+
+- 📊 验证并导入 Spotify 数据
+- ⏱️ 每小时听歌时长 = 10 CVIB
+- 🎯 深度艺人奖励 (前10艺人额外加成)
+
+### 铸造徽章成本
+
+| 等级 | 名称 | 所需 $CVIB |
+|------|------|-----------|
+| 🌱 Tier 1 | 入门 | 100 CVIB |
+| ⭐ Tier 2 | 资深 | 500 CVIB |
+| 👑 Tier 3 | OG | 1000 CVIB |
+
+### 代币流转
+
+```
+验证 Spotify → 计算听歌时长 → 获得 $CVIB → 销毁 $CVIB → 铸造 SBT 徽章
+```
 
 ---
 
@@ -61,7 +88,7 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
 ┌───────────────▼─────────────────────────────────────────────┐
 │                        区块链 (Base Sepolia)                 │
 ├─────────────────────────────────────────────────────────────┤
-│  MusicConsensusSBT.sol (ERC-1155 灵魂绑定代币)  │   Viem     │
+│  VibeToken ($CVIB)  │  MusicConsensusSBT  │   Viem          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,11 +137,26 @@ EXPO_PUBLIC_RECLAIM_PROVIDER_ID=your_reclaim_provider_id
 
 ---
 
-## 📱 应用截图
+## 🔗 智能合约
 
-| 登录页 | 主页 | 验证页 | 个人资料 |
-|--------|------|--------|----------|
-| 🔐 | 🏠 | 🎵 | 👤 |
+已部署在 **Base Sepolia** 测试网：
+
+| 合约 | 地址 | 功能 |
+|------|------|------|
+| **VibeToken ($CVIB)** | `0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074` | ERC-20 代币 |
+| **MusicConsensusSBT V3** | `0x1184da97ef82dac78196b23182c82fe6acca82e3` | SBT 徽章 |
+
+### 合约功能
+
+**VibeToken.sol**
+- `mint(address, amount)` - 铸造 $CVIB (授权地址)
+- `burn(amount)` - 销毁 $CVIB
+- `balanceOf(address)` - 查询余额
+
+**MusicConsensusSBT.sol**
+- `mintWithProof(proof, genreId, tier)` - 链上验证铸造
+- `getUserBadges(address)` - 获取用户徽章
+- `getBadgeInfo(address, genreId)` - 获取徽章详情
 
 ---
 
@@ -125,43 +167,27 @@ ConVibe/
 ├── app/                    # Expo Router 页面
 │   ├── (tabs)/             # Tab 导航页面
 │   │   ├── home.tsx        # 主页
-│   │   ├── feed.tsx        # 共识 Feed
-│   │   ├── verify-spotify.tsx  # Spotify 验证
 │   │   └── profile.tsx     # 个人资料
-│   ├── login.tsx           # 登录页
+│   ├── music-vibe-detail.tsx  # 音乐 Vibe 详情页
 │   └── _layout.tsx         # 根布局
 ├── components/             # React 组件
-│   ├── UserBadges.tsx      # 用户徽章展示
-│   ├── SpotifyVerifier.tsx # Spotify 验证组件
+│   ├── CVIBBalanceCard.tsx # $CVIB 余额显示
 │   ├── MintBadgeButton.tsx # 铸造徽章按钮
-│   └── ui/                 # UI 组件库
+│   ├── SpotifyStats.tsx    # 统计展示
+│   └── UserBadges.tsx      # 用户徽章展示
 ├── contracts/              # Solidity 智能合约
-│   └── MusicConsensusSBT.sol
+│   ├── VibeToken.sol       # $CVIB 代币
+│   └── MusicConsensusSBTV4.sol  # SBT 徽章 V4
 ├── hooks/                  # React Hooks
-│   ├── useMintSBT.ts       # SBT 铸造逻辑
-│   └── useVote.ts          # 投票逻辑
+│   └── useMintSBT.ts       # SBT 铸造逻辑
 ├── lib/                    # 工具库
 │   ├── web3/               # 区块链相关
-│   ├── spotify/            # Spotify API
-│   └── types/              # TypeScript 类型
+│   ├── spotify/            # Spotify 数据解析
+│   └── consensus/          # $CVIB 计算逻辑
 └── scripts/                # 部署脚本
+    ├── mint-cvib.js        # 手动发放 $CVIB
+    └── deploy-sbt-v4.js    # 部署 V4 合约
 ```
-
----
-
-## 🔗 智能合约
-
-**MusicConsensusSBT** 已部署在 Base Sepolia 测试网：
-
-| 合约 | 地址 |
-|------|------|
-| MusicConsensusSBT | `0xYourContractAddress` |
-
-### 合约功能
-
-- `mintBadge(address, genreId)` - 铸造音乐流派徽章
-- `getUserBadges(address)` - 获取用户所有徽章
-- `checkBadge(address, genreId)` - 检查是否拥有特定徽章
 
 ---
 
@@ -170,9 +196,9 @@ ConVibe/
 | 阶段 | 功能 | 状态 |
 |------|------|------|
 | **Phase 1** | Spotify 音乐验证 + SBT 铸造 | ✅ 已完成 |
-| **Phase 2** | 泛文化扩展 (Netflix, Steam, Kindle) | 🔜 规划中 |
-| **Phase 3** | 去中心化存储 (IPFS/Arweave) | 🔜 规划中 |
-| **Phase 4** | 经济模型 (ERC-20 策展人激励) | 🔜 规划中 |
+| **Phase 2** | $CVIB 经济模型 | ✅ 已完成 |
+| **Phase 3** | 泛文化扩展 (Netflix, Steam, Kindle) | 🔜 规划中 |
+| **Phase 4** | 去中心化存储 (IPFS/Arweave) | 🔜 规划中 |
 
 ---
 
