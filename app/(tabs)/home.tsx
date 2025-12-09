@@ -1,213 +1,374 @@
 /**
- * app/(tabs)/home.tsx - 主页
+ * app/(tabs)/home.tsx - 主页 (Reddit-style)
  * 
- * 用户登录成功后看到的第一个页面。
- * 展示用户信息和钱包地址，证明"无感接入"成功。
+ * 重构后的主页，展示：
+ * - 2x5 Vibe Blocks 网格
+ * - 综合社区 Feed
  */
 
-import { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from "react-native";
-import * as Clipboard from "expo-clipboard";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, RefreshControl } from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
-import UserBadges from "../../components/UserBadges";
 
-/**
- * HomeScreen - 主页组件
- */
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const BLOCK_SIZE = (SCREEN_WIDTH - 48 - 12) / 2; // 2 columns with padding and gap
+
+// ============================================
+// Vibe Block 类型定义
+// ============================================
+
+interface VibeBlock {
+    id: string;
+    name: string;
+    emoji: string;
+    color: string;
+    gradientColors: [string, string];
+    isActive: boolean;
+    route?: string;
+}
+
+// 预定义的 Vibe Blocks
+const VIBE_BLOCKS: VibeBlock[] = [
+    {
+        id: "music",
+        name: "音乐 Vibe",
+        emoji: "🎵",
+        color: "#8b5cf6",
+        gradientColors: ["#8b5cf6", "#6366f1"],
+        isActive: true,
+        route: "/music-vibe-detail",
+    },
+    {
+        id: "gaming",
+        name: "游戏 Vibe",
+        emoji: "🎮",
+        color: "#10b981",
+        gradientColors: ["#10b981", "#059669"],
+        isActive: false,
+    },
+    {
+        id: "movie",
+        name: "电影 Vibe",
+        emoji: "🎬",
+        color: "#f59e0b",
+        gradientColors: ["#f59e0b", "#d97706"],
+        isActive: false,
+    },
+    {
+        id: "fitness",
+        name: "健身 Vibe",
+        emoji: "💪",
+        color: "#ef4444",
+        gradientColors: ["#ef4444", "#dc2626"],
+        isActive: false,
+    },
+    {
+        id: "travel",
+        name: "旅行 Vibe",
+        emoji: "✈️",
+        color: "#06b6d4",
+        gradientColors: ["#06b6d4", "#0891b2"],
+        isActive: false,
+    },
+    {
+        id: "food",
+        name: "美食 Vibe",
+        emoji: "🍜",
+        color: "#f97316",
+        gradientColors: ["#f97316", "#ea580c"],
+        isActive: false,
+    },
+];
+
+// 占位 Feed 数据
+const PLACEHOLDER_FEED = [
+    {
+        id: "1",
+        title: "🎤 谁是最被低估的说唱歌手？",
+        votes: 128,
+        comments: 45,
+        vibe: "音乐 Vibe",
+    },
+    {
+        id: "2",
+        title: "🎸 2024年最佳摇滚专辑投票",
+        votes: 89,
+        comments: 32,
+        vibe: "音乐 Vibe",
+    },
+    {
+        id: "3",
+        title: "🎹 古典乐入门推荐榜单共识",
+        votes: 67,
+        comments: 28,
+        vibe: "音乐 Vibe",
+    },
+];
+
+// ============================================
+// Vibe Block 组件
+// ============================================
+
+function VibeBlockCard({ block, onPress }: { block: VibeBlock; onPress: () => void }) {
+    return (
+        <Pressable
+            onPress={onPress}
+            disabled={!block.isActive}
+            style={({ pressed }) => [
+                styles.vibeBlock,
+                { opacity: pressed && block.isActive ? 0.8 : 1 },
+            ]}
+        >
+            <LinearGradient
+                colors={block.isActive ? block.gradientColors : ["#27272a", "#18181b"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.vibeBlockGradient}
+            >
+                <Text style={styles.vibeBlockEmoji}>{block.emoji}</Text>
+                <Text style={[styles.vibeBlockName, !block.isActive && styles.vibeBlockNameInactive]}>
+                    {block.name}
+                </Text>
+                {block.isActive ? (
+                    <View style={styles.activeIndicator}>
+                        <Text style={styles.activeIndicatorText}>进入 →</Text>
+                    </View>
+                ) : (
+                    <View style={styles.comingSoonBadge}>
+                        <Text style={styles.comingSoonText}>即将上线</Text>
+                    </View>
+                )}
+            </LinearGradient>
+        </Pressable>
+    );
+}
+
+// ============================================
+// Feed Card 组件
+// ============================================
+
+function FeedCard({ item }: { item: typeof PLACEHOLDER_FEED[0] }) {
+    return (
+        <View style={styles.feedCard}>
+            <View style={styles.feedCardHeader}>
+                <Text style={styles.feedCardVibe}>{item.vibe}</Text>
+            </View>
+            <Text style={styles.feedCardTitle}>{item.title}</Text>
+            <View style={styles.feedCardStats}>
+                <Text style={styles.feedCardStat}>👍 {item.votes}</Text>
+                <Text style={styles.feedCardStat}>💬 {item.comments}</Text>
+            </View>
+        </View>
+    );
+}
+
+// ============================================
+// HomeScreen 主组件
+// ============================================
+
 export default function HomeScreen() {
-    // 获取当前用户信息
     const { user } = usePrivy();
-
-    // 获取嵌入式钱包
     const wallet = useEmbeddedWallet();
+    const router = useRouter();
+    const [refreshing, setRefreshing] = useState(false);
 
-    // 手动创建钱包的状态
-    const [isCreating, setIsCreating] = useState(false);
-    const [createError, setCreateError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        setTimeout(() => setRefreshing(false), 1000);
+    }, []);
 
-    // 获取用户的主要登录账户（Google）
-    const linkedAccounts = user?.linked_accounts || [];
-    const primaryAccount = linkedAccounts[0];
-
-    // 调试：打印钱包状态和用户信息
-    useEffect(() => {
-        console.log("=== 钱包调试信息 ===");
-        console.log("钱包状态:", wallet.status);
-        console.log("用户 ID:", user?.id);
-        console.log("=====================");
-    }, [wallet.status, user]);
-
-    /**
-     * 复制钱包地址
-     */
-    const handleCopyAddress = async () => {
-        if (wallet.account?.address) {
-            await Clipboard.setStringAsync(wallet.account.address);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
-
-    /**
-     * 手动创建钱包
-     */
-    const handleCreateWallet = async () => {
-        try {
-            setIsCreating(true);
-            setCreateError(null);
-
-            if (wallet.status === "not-created" && "create" in wallet) {
-                console.log("开始手动创建钱包...");
-                await (wallet as { create: () => Promise<void> }).create();
-                console.log("钱包创建成功！");
-            } else {
-                console.log("钱包状态不支持创建:", wallet.status);
-                setCreateError(`当前状态不支持创建: ${wallet.status}`);
-            }
-        } catch (error) {
-            console.error("创建钱包失败:", error);
-            setCreateError(error instanceof Error ? error.message : "创建失败");
-        } finally {
-            setIsCreating(false);
+    const handleVibePress = (block: VibeBlock) => {
+        if (block.route) {
+            router.push(block.route as any);
         }
     };
 
     return (
-        <ScrollView className="flex-1 bg-dark-50">
-            <View className="px-6 pt-16 pb-8">
-                {/* 欢迎区域 */}
-                <View className="mb-8">
-                    <Text className="text-gray-400 text-lg">欢迎回来 👋</Text>
-                    <Text className="text-white text-3xl font-bold mt-2">
-                        VibeConsensus
-                    </Text>
+        <ScrollView
+            style={styles.container}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#8b5cf6"
+                />
+            }
+        >
+            <View style={styles.content}>
+                {/* 头部 */}
+                <View style={styles.header}>
+                    <Text style={styles.welcomeText}>探索 Vibes 👋</Text>
+                    <Text style={styles.titleText}>VibeConsensus</Text>
                 </View>
 
-                {/* 钱包信息卡片 */}
-                <View className="bg-dark-200 rounded-2xl p-6 mb-6">
-                    <View className="flex-row items-center mb-4">
-                        <Text className="text-2xl mr-3">💳</Text>
-                        <Text className="text-white text-lg font-semibold">
-                            你的 Web3 钱包
-                        </Text>
-                    </View>
-
-                    {wallet.status === "connected" && wallet.account ? (
-                        <>
-                            <Text className="text-gray-400 text-sm mb-2">钱包地址</Text>
-                            <Pressable
-                                onPress={handleCopyAddress}
-                                className="bg-dark-50 rounded-lg p-3 flex-row items-center justify-between"
-                                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                            >
-                                <Text
-                                    className="text-primary-400 font-mono text-sm flex-1"
-                                    numberOfLines={1}
-                                >
-                                    {wallet.account.address}
-                                </Text>
-                                <Text className="text-gray-400 ml-2">
-                                    {copied ? "✓ 已复制" : "📋 复制"}
-                                </Text>
-                            </Pressable>
-                            <Text className="text-gray-500 text-xs mt-3 text-center">
-                                ✨ 点击地址可复制
-                            </Text>
-                        </>
-                    ) : wallet.status === "connecting" ? (
-                        <View className="items-center py-4">
-                            <ActivityIndicator size="small" color="#9333ea" />
-                            <Text className="text-gray-400 mt-2">正在连接钱包...</Text>
-                        </View>
-                    ) : wallet.status === "not-created" ? (
-                        <View>
-                            <Text className="text-gray-400 mb-3">钱包尚未创建</Text>
-
-                            <Pressable
-                                onPress={handleCreateWallet}
-                                disabled={isCreating}
-                                className={`py-3 px-4 rounded-xl ${isCreating ? "bg-gray-700" : "bg-primary-600"}`}
-                            >
-                                {isCreating ? (
-                                    <View className="flex-row items-center justify-center">
-                                        <ActivityIndicator size="small" color="#ffffff" />
-                                        <Text className="text-white ml-2">创建中...</Text>
-                                    </View>
-                                ) : (
-                                    <Text className="text-white text-center font-semibold">
-                                        🔐 创建钱包
-                                    </Text>
-                                )}
-                            </Pressable>
-
-                            {createError && (
-                                <Text className="text-red-400 text-xs mt-2 text-center">
-                                    {createError}
-                                </Text>
-                            )}
-                        </View>
-                    ) : (
-                        <Text className="text-gray-400">
-                            正在加载钱包信息... (状态: {wallet.status})
-                        </Text>
-                    )}
-                </View>
-
-                {/* 用户徽章 */}
-                <View className="mb-6">
-                    <UserBadges />
-                </View>
-
-                {/* 账户信息卡片 */}
-                <View className="bg-dark-200 rounded-2xl p-6 mb-6">
-                    <View className="flex-row items-center mb-4">
-                        <Text className="text-2xl mr-3">👤</Text>
-                        <Text className="text-white text-lg font-semibold">
-                            账户信息
-                        </Text>
-                    </View>
-
-                    {primaryAccount ? (
-                        <View>
-                            <View className="flex-row justify-between">
-                                <Text className="text-gray-400">登录方式</Text>
-                                <Text className="text-white capitalize">
-                                    {primaryAccount.type === "google_oauth" ? "Google" : primaryAccount.type}
-                                </Text>
-                            </View>
-
-                            {"email" in primaryAccount && (
-                                <View className="flex-row justify-between mt-2">
-                                    <Text className="text-gray-400">邮箱</Text>
-                                    <Text className="text-white">{String(primaryAccount.email)}</Text>
-                                </View>
-                            )}
-                        </View>
-                    ) : (
-                        <Text className="text-gray-400">正在加载账户信息...</Text>
-                    )}
-                </View>
-
-                {/* 快速操作卡片 */}
-                <View className="bg-primary-900/50 rounded-2xl p-6 border border-primary-700/50">
-                    <Text className="text-white text-lg font-semibold mb-3">
-                        🎵 开始使用
-                    </Text>
-                    <Text className="text-gray-300 leading-5 mb-4">
-                        1️⃣ 前往"验证"页面连接 Spotify
-                        {"\n"}
-                        2️⃣ 获取你的音乐流派数据
-                        {"\n"}
-                        3️⃣ 铸造链上 SBT 徽章
-                    </Text>
-                    <View className="bg-primary-700/30 rounded-lg p-3">
-                        <Text className="text-primary-300 text-sm text-center">
-                            💡 点击底部 Tab 栏的 "🎵 验证" 开始
-                        </Text>
+                {/* Vibe Blocks 网格 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>🌈 Vibe Blocks</Text>
+                    <Text style={styles.sectionSubtitle}>选择你感兴趣的领域社区</Text>
+                    <View style={styles.vibeGrid}>
+                        {VIBE_BLOCKS.map((block) => (
+                            <VibeBlockCard
+                                key={block.id}
+                                block={block}
+                                onPress={() => handleVibePress(block)}
+                            />
+                        ))}
                     </View>
                 </View>
+
+                {/* 综合社区 Feed */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>🔥 热门共识</Text>
+                    <Text style={styles.sectionSubtitle}>社区正在讨论的话题</Text>
+                    {PLACEHOLDER_FEED.map((item) => (
+                        <FeedCard key={item.id} item={item} />
+                    ))}
+
+                    {/* 查看更多 */}
+                    <Pressable style={styles.viewMoreButton}>
+                        <Text style={styles.viewMoreText}>查看更多热门话题 →</Text>
+                    </Pressable>
+                </View>
+
+                {/* 底部安全区域 */}
+                <View style={{ height: 100 }} />
             </View>
         </ScrollView>
     );
 }
+
+// ============================================
+// 样式
+// ============================================
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#09090b",
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingTop: 60,
+    },
+    header: {
+        marginBottom: 24,
+    },
+    welcomeText: {
+        color: "#a1a1aa",
+        fontSize: 16,
+    },
+    titleText: {
+        color: "#ffffff",
+        fontSize: 28,
+        fontWeight: "bold",
+        marginTop: 4,
+    },
+    section: {
+        marginBottom: 28,
+    },
+    sectionTitle: {
+        color: "#ffffff",
+        fontSize: 18,
+        fontWeight: "600",
+        marginBottom: 4,
+    },
+    sectionSubtitle: {
+        color: "#71717a",
+        fontSize: 14,
+        marginBottom: 16,
+    },
+    vibeGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12,
+    },
+    vibeBlock: {
+        width: BLOCK_SIZE,
+        height: BLOCK_SIZE * 0.8,
+        borderRadius: 16,
+        overflow: "hidden",
+    },
+    vibeBlockGradient: {
+        flex: 1,
+        padding: 16,
+        justifyContent: "space-between",
+    },
+    vibeBlockEmoji: {
+        fontSize: 32,
+    },
+    vibeBlockName: {
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    vibeBlockNameInactive: {
+        color: "#71717a",
+    },
+    activeIndicator: {
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: "flex-start",
+    },
+    activeIndicatorText: {
+        color: "#ffffff",
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    comingSoonBadge: {
+        backgroundColor: "rgba(113, 113, 122, 0.3)",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: "flex-start",
+    },
+    comingSoonText: {
+        color: "#71717a",
+        fontSize: 12,
+    },
+    feedCard: {
+        backgroundColor: "#18181b",
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#27272a",
+    },
+    feedCardHeader: {
+        marginBottom: 8,
+    },
+    feedCardVibe: {
+        color: "#8b5cf6",
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    feedCardTitle: {
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: "500",
+        marginBottom: 12,
+    },
+    feedCardStats: {
+        flexDirection: "row",
+        gap: 16,
+    },
+    feedCardStat: {
+        color: "#71717a",
+        fontSize: 14,
+    },
+    viewMoreButton: {
+        backgroundColor: "#27272a",
+        borderRadius: 12,
+        padding: 16,
+        alignItems: "center",
+        marginTop: 4,
+    },
+    viewMoreText: {
+        color: "#8b5cf6",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+});

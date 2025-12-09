@@ -132,31 +132,23 @@ export default function TabLayout() {
                     }}
                 />
 
-                {/* 共识 Feed Tab */}
+                {/* 隐藏的页面 (不在 Tab 栏显示，但保留路由) */}
                 <Tabs.Screen
                     name="feed"
                     options={{
-                        title: "共识",
-                        tabBarIcon: ({ color, focused }) => (
-                            <TabIcon emoji="🔥" label="共识" focused={focused} color={color} />
-                        ),
+                        href: null, // 隐藏此 Tab
                     }}
                 />
-
-                {/* Spotify 验证 Tab */}
+                <Tabs.Screen
+                    name="stats"
+                    options={{
+                        href: null, // 隐藏此 Tab
+                    }}
+                />
                 <Tabs.Screen
                     name="verify-spotify"
                     options={{
-                        title: "验证",
-                        tabBarActiveTintColor: COLORS.vibeGreen,
-                        tabBarIcon: ({ color, focused }) => (
-                            <TabIcon
-                                emoji="🎵"
-                                label="验证"
-                                focused={focused}
-                                color={focused ? COLORS.vibeGreen : color}
-                            />
-                        ),
+                        href: null, // 隐藏此 Tab
                     }}
                 />
 
