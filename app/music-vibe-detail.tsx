@@ -1,9 +1,9 @@
 /**
- * app/music-vibe-detail.tsx - 音乐 Vibe 详情页
+ * app/music-vibe-detail.tsx - 音乐 Vibe 详情页 V2
  * 
  * 整合三个核心功能:
- * - 验证: SpotifyVerifier
- * - 统计: SpotifyStats + SpotifyDataImport
+ * - 验证: 三种方式 (OAuth/Import/Reclaim)
+ * - 统计: SpotifyStats
  * - 共识: ConsensusFeed
  */
 
@@ -12,16 +12,23 @@ import { View, Text, ScrollView, Pressable, StyleSheet, SafeAreaView, StatusBar 
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import SpotifyVerifier, { type VerificationResult } from "../components/SpotifyVerifier";
-import SpotifyStats from "../components/SpotifyStats";
+import SpotifyConnector from "../components/SpotifyConnector";
 import SpotifyDataImport from "../components/SpotifyDataImport";
+import SpotifyStats from "../components/SpotifyStats";
+import MintBadgeButton from "../components/MintBadgeButton";
+import UserBadges from "../components/UserBadges";
 import ConsensusFeed from "../components/ConsensusFeed";
 import type { StreamingStats } from "../lib/spotify/streaming-history-parser";
+import type { SpotifyTokens } from "../lib/spotify/spotify-auth";
+import { calculateTierFromPlaytime } from "../lib/spotify/streaming-history-parser";
+import { TIER, type TierLevel } from "../lib/consensus/tier-calculator";
 
 // ============================================
 // Tab 类型定义
 // ============================================
 
 type TabType = "verify" | "stats" | "consensus";
+type VerifyMethod = "oauth" | "import" | "reclaim";
 
 interface TabItem {
     key: TabType;
@@ -35,6 +42,21 @@ const TABS: TabItem[] = [
     { key: "consensus", label: "共识", emoji: "🔥" },
 ];
 
+// 可选流派列表
+const AVAILABLE_GENRES = [
+    { id: "pop", name: "Pop", emoji: "🎤" },
+    { id: "rock", name: "Rock", emoji: "🎸" },
+    { id: "hip-hop", name: "Hip-Hop", emoji: "🎤" },
+    { id: "r&b", name: "R&B", emoji: "🎵" },
+    { id: "electronic", name: "Electronic", emoji: "🎧" },
+];
+
+interface SpotifyData {
+    profile: { display_name: string; email: string } | null;
+    topArtists: Array<{ name: string; genres: string[]; popularity: number }>;
+    topGenres: string[];
+}
+
 // ============================================
 // Music Vibe Detail 主组件
 // ============================================
@@ -42,65 +64,281 @@ const TABS: TabItem[] = [
 export default function MusicVibeDetail() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>("verify");
-    const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+
+    // 验证方式
+    const [verifyMethod, setVerifyMethod] = useState<VerifyMethod>("oauth");
+
+    // 验证状态
+    const [reclaimResult, setReclaimResult] = useState<VerificationResult | null>(null);
+    const [oauthConnected, setOauthConnected] = useState(false);
+    const [oauthData, setOauthData] = useState<SpotifyData | null>(null);
     const [importedStats, setImportedStats] = useState<StreamingStats | null>(null);
+    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+    // 铸造状态
+    const [mintSuccess, setMintSuccess] = useState(false);
+    const [badgeRefreshKey, setBadgeRefreshKey] = useState(0);
+
+    // 切换流派选择
+    const toggleGenre = (genreId: string) => {
+        setSelectedGenres(prev =>
+            prev.includes(genreId)
+                ? prev.filter(g => g !== genreId)
+                : [...prev, genreId]
+        );
+    };
+
+    // 获取当前可用的流派
+    const getCurrentGenres = (): string[] => {
+        if (verifyMethod === "reclaim" && reclaimResult?.parsedData?.genres) {
+            return reclaimResult.parsedData.genres;
+        }
+        if (verifyMethod === "oauth" && oauthData?.topGenres) {
+            return oauthData.topGenres;
+        }
+        if (verifyMethod === "import" && importedStats) {
+            return selectedGenres;
+        }
+        return [];
+    };
+
+    // 获取当前 Tier
+    const getCurrentTier = (): TierLevel => {
+        if (verifyMethod === "reclaim" && reclaimResult?.suggestedTier) {
+            return reclaimResult.suggestedTier;
+        }
+        if (verifyMethod === "oauth" && oauthData?.topArtists?.[0]?.popularity) {
+            const popularity = oauthData.topArtists[0].popularity;
+            if (popularity >= 80) return TIER.OG;
+            if (popularity >= 50) return TIER.VETERAN;
+        }
+        if (verifyMethod === "import" && importedStats?.topArtists?.[0]) {
+            return calculateTierFromPlaytime(importedStats.topArtists[0].totalHours);
+        }
+        return TIER.ENTRY;
+    };
+
+    const isVerified =
+        (verifyMethod === "reclaim" && reclaimResult !== null) ||
+        (verifyMethod === "oauth" && oauthConnected && oauthData !== null) ||
+        (verifyMethod === "import" && importedStats !== null);
+
+    const genres = getCurrentGenres();
+    const tier = getCurrentTier();
 
     // 处理验证完成
-    const handleVerificationComplete = useCallback((result: VerificationResult) => {
-        console.log("验证完成:", result);
-        setVerificationResult(result);
+    const handleReclaimComplete = useCallback((result: VerificationResult) => {
+        console.log("Reclaim 验证完成:", result);
+        setReclaimResult(result);
     }, []);
 
-    // 处理数据导入完成
+    const handleOAuthConnect = useCallback((data: SpotifyData, tokens: SpotifyTokens) => {
+        console.log("OAuth 连接完成:", data);
+        setOauthConnected(true);
+        setOauthData(data);
+    }, []);
+
     const handleImportComplete = useCallback((stats: StreamingStats) => {
         console.log("导入完成:", stats);
         setImportedStats(stats);
     }, []);
 
+    const handleMintSuccess = useCallback((txHash: string, mintedGenres: number[]) => {
+        console.log("铸造成功:", { txHash, mintedGenres });
+        setMintSuccess(true);
+        setBadgeRefreshKey(prev => prev + 1);
+    }, []);
+
+    // 重置
+    const handleReset = useCallback(() => {
+        setReclaimResult(null);
+        setOauthConnected(false);
+        setOauthData(null);
+        setImportedStats(null);
+        setSelectedGenres([]);
+        setMintSuccess(false);
+    }, []);
+
+    // 渲染验证 Tab
+    const renderVerifyTab = () => (
+        <View style={styles.tabContent}>
+            {/* 我的徽章 */}
+            <View style={styles.badgesSection}>
+                <UserBadges key={`badges-${badgeRefreshKey}`} />
+            </View>
+
+            {/* 铸造成功提示 */}
+            {mintSuccess && (
+                <View style={styles.successCard}>
+                    <Text style={styles.successTitle}>🎉 恭喜！</Text>
+                    <Text style={styles.successText}>
+                        你的音乐徽章已铸造成功！这是一个灵魂绑定代币 (SBT)，无法转让，永久属于你。
+                    </Text>
+                    <Pressable onPress={handleReset} style={styles.continueButton}>
+                        <Text style={styles.continueButtonText}>继续验证其他流派</Text>
+                    </Pressable>
+                </View>
+            )}
+
+            {/* 验证方式选择 */}
+            {!isVerified && !mintSuccess && (
+                <View style={styles.methodSelector}>
+                    <Text style={styles.methodLabel}>选择验证方式</Text>
+                    <View style={styles.methodButtons}>
+                        <Pressable
+                            onPress={() => setVerifyMethod("oauth")}
+                            style={[styles.methodBtn, verifyMethod === "oauth" && styles.methodBtnActive]}
+                        >
+                            <Text style={[styles.methodBtnText, verifyMethod === "oauth" && styles.methodBtnTextActive]}>
+                                🔗 OAuth
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => setVerifyMethod("import")}
+                            style={[styles.methodBtn, verifyMethod === "import" && styles.methodBtnActiveImport]}
+                        >
+                            <Text style={[styles.methodBtnText, verifyMethod === "import" && styles.methodBtnTextActive]}>
+                                📊 导入
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => setVerifyMethod("reclaim")}
+                            style={[styles.methodBtn, verifyMethod === "reclaim" && styles.methodBtnActiveReclaim]}
+                        >
+                            <Text style={[styles.methodBtnText, verifyMethod === "reclaim" && styles.methodBtnTextActive]}>
+                                🔒 Reclaim
+                            </Text>
+                        </Pressable>
+                    </View>
+                </View>
+            )}
+
+            {/* 验证组件 */}
+            {!isVerified && !mintSuccess && (
+                <View style={styles.verifyComponent}>
+                    {verifyMethod === "oauth" && (
+                        <SpotifyConnector
+                            onConnect={handleOAuthConnect}
+                            onDisconnect={handleReset}
+                        />
+                    )}
+                    {verifyMethod === "import" && (
+                        <SpotifyDataImport
+                            onImportComplete={handleImportComplete}
+                            onError={(err) => console.error("导入错误:", err)}
+                        />
+                    )}
+                    {verifyMethod === "reclaim" && (
+                        <SpotifyVerifier
+                            onVerificationComplete={handleReclaimComplete}
+                            onError={(err) => console.error("Reclaim 错误:", err)}
+                        />
+                    )}
+                </View>
+            )}
+
+            {/* 数据导入成功 - 显示流派选择 */}
+            {verifyMethod === "import" && importedStats && !mintSuccess && (
+                <View>
+                    <View style={styles.genreSelector}>
+                        <Text style={styles.genreSelectorTitle}>选择要铸造的流派徽章</Text>
+                        <View style={styles.genreButtons}>
+                            {AVAILABLE_GENRES.map((genre) => (
+                                <Pressable
+                                    key={genre.id}
+                                    onPress={() => toggleGenre(genre.id)}
+                                    style={[
+                                        styles.genreBtn,
+                                        selectedGenres.includes(genre.id) && styles.genreBtnActive,
+                                    ]}
+                                >
+                                    <Text style={[
+                                        styles.genreBtnText,
+                                        selectedGenres.includes(genre.id) && styles.genreBtnTextActive,
+                                    ]}>
+                                        {genre.emoji} {genre.name}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+
+                    {selectedGenres.length > 0 && (
+                        <MintBadgeButton
+                            genres={selectedGenres}
+                            suggestedTier={tier}
+                            onSuccess={handleMintSuccess}
+                            onError={(error) => console.error("铸造失败:", error)}
+                        />
+                    )}
+                </View>
+            )}
+
+            {/* OAuth/Reclaim 验证成功后显示铸造按钮 */}
+            {isVerified && verifyMethod !== "import" && genres.length > 0 && !mintSuccess && (
+                <View>
+                    <View style={styles.detectedGenres}>
+                        <Text style={styles.detectedGenresLabel}>检测到你的音乐流派：</Text>
+                        <View style={styles.genreTags}>
+                            {genres.slice(0, 5).map((genre, index) => (
+                                <View key={index} style={styles.genreTag}>
+                                    <Text style={styles.genreTagText}>{genre}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+
+                    <MintBadgeButton
+                        genres={genres}
+                        suggestedTier={tier}
+                        proof={verifyMethod === "reclaim" ? reclaimResult?.proof ?? undefined : undefined}
+                        onSuccess={handleMintSuccess}
+                        onError={(error) => console.error("铸造失败:", error)}
+                    />
+
+                    <Pressable onPress={handleReset} style={styles.resetButton}>
+                        <Text style={styles.resetButtonText}>重新验证</Text>
+                    </Pressable>
+                </View>
+            )}
+        </View>
+    );
+
+    // 渲染统计 Tab
+    const renderStatsTab = () => (
+        <View style={styles.tabContent}>
+            {importedStats ? (
+                <>
+                    <Text style={styles.tabDescription}>你的 Spotify 听歌统计数据</Text>
+                    <SpotifyStats stats={importedStats} showFullDetails />
+                </>
+            ) : (
+                <>
+                    <Text style={styles.tabDescription}>
+                        导入 Spotify 数据包，解锁详细统计和高级徽章
+                    </Text>
+                    <SpotifyDataImport onImportComplete={handleImportComplete} />
+                </>
+            )}
+        </View>
+    );
+
+    // 渲染共识 Tab
+    const renderConsensusTab = () => (
+        <View style={styles.tabContent}>
+            <ConsensusFeed />
+        </View>
+    );
+
     // 渲染当前 Tab 内容
     const renderTabContent = () => {
         switch (activeTab) {
             case "verify":
-                return (
-                    <View style={styles.tabContent}>
-                        <Text style={styles.tabDescription}>
-                            使用 Reclaim Protocol 验证你的 Spotify 听歌数据，获取链上证明
-                        </Text>
-                        <SpotifyVerifier
-                            onVerificationComplete={handleVerificationComplete}
-                            onError={(error) => console.error("验证错误:", error)}
-                        />
-                    </View>
-                );
-
+                return renderVerifyTab();
             case "stats":
-                return (
-                    <View style={styles.tabContent}>
-                        {importedStats ? (
-                            <>
-                                <Text style={styles.tabDescription}>
-                                    你的 Spotify 听歌统计数据
-                                </Text>
-                                <SpotifyStats stats={importedStats} showFullDetails />
-                            </>
-                        ) : (
-                            <>
-                                <Text style={styles.tabDescription}>
-                                    导入 Spotify 数据包，解锁详细统计和高级徽章
-                                </Text>
-                                <SpotifyDataImport onImportComplete={handleImportComplete} />
-                            </>
-                        )}
-                    </View>
-                );
-
+                return renderStatsTab();
             case "consensus":
-                return (
-                    <View style={styles.tabContent}>
-                        <ConsensusFeed />
-                    </View>
-                );
-
+                return renderConsensusTab();
             default:
                 return null;
         }
@@ -168,99 +406,62 @@ export default function MusicVibeDetail() {
 // ============================================
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#09090b",
-    },
+    container: { flex: 1, backgroundColor: "#09090b" },
     header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#27272a",
+        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+        paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#27272a",
     },
-    backButton: {
-        paddingVertical: 8,
-        paddingRight: 16,
-    },
-    backButtonText: {
-        color: "#8b5cf6",
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    headerTitleContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    headerEmoji: {
-        fontSize: 24,
-        marginRight: 8,
-    },
-    headerTitle: {
-        color: "#ffffff",
-        fontSize: 18,
-        fontWeight: "600",
-    },
-    headerSpacer: {
-        width: 60, // Balance the back button
-    },
-    descriptionBanner: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-    descriptionText: {
-        color: "#ffffff",
-        fontSize: 13,
-        textAlign: "center",
-        opacity: 0.9,
-    },
-    tabBar: {
-        flexDirection: "row",
-        backgroundColor: "#18181b",
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        gap: 8,
-    },
+    backButton: { paddingVertical: 8, paddingRight: 16 },
+    backButtonText: { color: "#8b5cf6", fontSize: 16, fontWeight: "500" },
+    headerTitleContainer: { flexDirection: "row", alignItems: "center" },
+    headerEmoji: { fontSize: 24, marginRight: 8 },
+    headerTitle: { color: "#ffffff", fontSize: 18, fontWeight: "600" },
+    headerSpacer: { width: 60 },
+    descriptionBanner: { paddingVertical: 12, paddingHorizontal: 16 },
+    descriptionText: { color: "#ffffff", fontSize: 13, textAlign: "center", opacity: 0.9 },
+    tabBar: { flexDirection: "row", backgroundColor: "#18181b", paddingVertical: 8, paddingHorizontal: 16, gap: 8 },
     tabItem: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 10,
-        backgroundColor: "#27272a",
-        gap: 6,
+        flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+        paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "#27272a", gap: 6,
     },
-    tabItemActive: {
-        backgroundColor: "#8b5cf6",
-    },
-    tabEmoji: {
-        fontSize: 16,
-    },
-    tabLabel: {
-        color: "#a1a1aa",
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    tabLabelActive: {
-        color: "#ffffff",
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    tabContent: {
-        padding: 16,
-    },
-    tabDescription: {
-        color: "#71717a",
-        fontSize: 14,
-        marginBottom: 16,
-        lineHeight: 20,
-    },
+    tabItemActive: { backgroundColor: "#8b5cf6" },
+    tabEmoji: { fontSize: 16 },
+    tabLabel: { color: "#a1a1aa", fontSize: 14, fontWeight: "500" },
+    tabLabelActive: { color: "#ffffff" },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingBottom: 40 },
+    tabContent: { padding: 16 },
+    tabDescription: { color: "#71717a", fontSize: 14, marginBottom: 16, lineHeight: 20 },
+
+    // 验证 Tab 样式
+    badgesSection: { marginBottom: 16 },
+    successCard: { backgroundColor: "rgba(34, 197, 94, 0.1)", borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: "rgba(34, 197, 94, 0.3)" },
+    successTitle: { color: "#22c55e", fontSize: 18, fontWeight: "600", marginBottom: 8 },
+    successText: { color: "#d1d5db", fontSize: 14, lineHeight: 20 },
+    continueButton: { marginTop: 16, backgroundColor: "#27272a", paddingVertical: 10, borderRadius: 8 },
+    continueButtonText: { color: "#a1a1aa", textAlign: "center", fontSize: 14 },
+    methodSelector: { backgroundColor: "#18181b", borderRadius: 12, padding: 16, marginBottom: 16 },
+    methodLabel: { color: "#a1a1aa", fontSize: 14, marginBottom: 12 },
+    methodButtons: { flexDirection: "row", gap: 8 },
+    methodBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: "#27272a", alignItems: "center" },
+    methodBtnActive: { backgroundColor: "#16a34a" },
+    methodBtnActiveImport: { backgroundColor: "#9333ea" },
+    methodBtnActiveReclaim: { backgroundColor: "#8b5cf6" },
+    methodBtnText: { color: "#a1a1aa", fontSize: 14, fontWeight: "500" },
+    methodBtnTextActive: { color: "#ffffff" },
+    verifyComponent: { marginBottom: 16 },
+    genreSelector: { backgroundColor: "#18181b", borderRadius: 12, padding: 16, marginBottom: 16 },
+    genreSelectorTitle: { color: "#ffffff", fontSize: 16, fontWeight: "500", marginBottom: 12 },
+    genreButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    genreBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#27272a" },
+    genreBtnActive: { backgroundColor: "#9333ea" },
+    genreBtnText: { color: "#a1a1aa", fontSize: 14 },
+    genreBtnTextActive: { color: "#ffffff" },
+    detectedGenres: { backgroundColor: "#18181b", borderRadius: 12, padding: 16, marginBottom: 16 },
+    detectedGenresLabel: { color: "#a1a1aa", fontSize: 14, marginBottom: 8 },
+    genreTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    genreTag: { backgroundColor: "rgba(139, 92, 246, 0.2)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.4)" },
+    genreTagText: { color: "#a78bfa", fontSize: 14, textTransform: "capitalize" },
+    resetButton: { marginTop: 16, paddingVertical: 10 },
+    resetButtonText: { color: "#71717a", textAlign: "center", fontSize: 14 },
 });
