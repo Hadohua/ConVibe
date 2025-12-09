@@ -1,15 +1,90 @@
 /**
- * lib/web3/abi.ts - MusicConsensusSBT V2 合约 ABI
+ * lib/web3/abi.ts - MusicConsensusSBT V3 合约 ABI
  * 
  * 功能：
+ * - 链上 Reclaim 验证 (V3 核心)
  * - 分层徽章 (Tiered Badges)
  * - 动态生命周期 (Decay Mechanism)
- * - 行为证明 (POAP Extension)
  */
+
+// Reclaim Proof 结构类型
+const ProofTuple = {
+    name: "proof",
+    type: "tuple",
+    components: [
+        {
+            name: "claimInfo",
+            type: "tuple",
+            components: [
+                { name: "provider", type: "string" },
+                { name: "parameters", type: "string" },
+                { name: "context", type: "string" },
+            ],
+        },
+        {
+            name: "signedClaim",
+            type: "tuple",
+            components: [
+                {
+                    name: "claim",
+                    type: "tuple",
+                    components: [
+                        { name: "identifier", type: "bytes32" },
+                        { name: "owner", type: "address" },
+                        { name: "timestampS", type: "uint32" },
+                        { name: "epoch", type: "uint32" },
+                    ],
+                },
+                { name: "signatures", type: "bytes[]" },
+            ],
+        },
+    ],
+};
 
 export const MusicConsensusSBTAbi = [
     // ============================================
-    // 分层铸造函数 (V2 核心)
+    // V3 链上验证铸造函数perceiveing
+    // ============================================
+
+    // 通过 Reclaim Proof 铸造徽章
+    {
+        name: "mintWithProof",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            ProofTuple,
+            { name: "genreId", type: "uint256" },
+            { name: "tier", type: "uint8" },
+        ],
+        outputs: [],
+    },
+    // 批量铸造 (需要 Proof)
+    {
+        name: "mintBatchWithProof",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            ProofTuple,
+            { name: "genreIds", type: "uint256[]" },
+            { name: "tiers", type: "uint8[]" },
+        ],
+        outputs: [],
+    },
+    // 刷新徽章 (需要 Proof)
+    {
+        name: "refreshBadgeWithProof",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+            ProofTuple,
+            { name: "genreId", type: "uint256" },
+            { name: "newTier", type: "uint8" },
+        ],
+        outputs: [],
+    },
+
+    // ============================================
+    // 分层铸造函数 (V2 兼容，但 V3 合约不支持)
     // ============================================
 
     // 铸造分层徽章

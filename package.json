@@ -15,6 +15,7 @@
     "@privy-io/expo-native-extensions": "^0.0.5",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@reclaimprotocol/reactnative-sdk": "^3.0.0",
+    "@reclaimprotocol/verifier-solidity-sdk": "^1.0.4",
     "buffer": "^6.0.3",
     "expo": "~54.0.27",
     "expo-apple-authentication": "~8.0.8",
@@ -59,5 +60,6 @@
     "hardhat": "^3.0.17",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "type": "module"
 }
