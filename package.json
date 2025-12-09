@@ -1,7 +1,6 @@
 {
   "name": "vibe-consensus",
   "version": "1.0.0",
-  "type": "module",
   "main": "entrypoint.js",
   "scripts": {
     "start": "expo start",
