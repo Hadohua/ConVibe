@@ -14,12 +14,30 @@ import { View, Text, ScrollView, Pressable } from "react-native";
 import SpotifyVerifier, { type VerificationResult } from "../../components/SpotifyVerifier";
 import SpotifyConnector from "../../components/SpotifyConnector";
 import SpotifyDataImport from "../../components/SpotifyDataImport";
+import SpotifyStats from "../../components/SpotifyStats";
 import MintBadgeButton from "../../components/MintBadgeButton";
 import UserBadges from "../../components/UserBadges";
 import type { SpotifyTokens } from "../../lib/spotify/spotify-auth";
 import type { StreamingStats } from "../../lib/spotify/streaming-history-parser";
 import { calculateTierFromPlaytime } from "../../lib/spotify/streaming-history-parser";
 import { TIER, type TierLevel } from "../../lib/consensus/tier-calculator";
+
+// ============================================
+// 可选流派列表
+// ============================================
+
+const AVAILABLE_GENRES = [
+    { id: "pop", name: "Pop", emoji: "🎤" },
+    { id: "rock", name: "Rock", emoji: "🎸" },
+    { id: "hip-hop", name: "Hip-Hop", emoji: "🎤" },
+    { id: "r&b", name: "R&B", emoji: "🎵" },
+    { id: "electronic", name: "Electronic", emoji: "🎧" },
+    { id: "jazz", name: "Jazz", emoji: "🎷" },
+    { id: "classical", name: "Classical", emoji: "🎻" },
+    { id: "country", name: "Country", emoji: "🤠" },
+    { id: "indie", name: "Indie", emoji: "🌿" },
+    { id: "metal", name: "Metal", emoji: "🤘" },
+];
 
 interface SpotifyData {
     profile: {
@@ -53,8 +71,20 @@ export default function VerifySpotifyScreen() {
     // 数据导入结果
     const [importedStats, setImportedStats] = useState<StreamingStats | null>(null);
 
+    // 用户选择的流派（用于数据导入方式）
+    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
     // 铸造状态
     const [mintSuccess, setMintSuccess] = useState(false);
+
+    // 切换流派选择
+    const toggleGenre = (genreId: string) => {
+        setSelectedGenres(prev =>
+            prev.includes(genreId)
+                ? prev.filter(g => g !== genreId)
+                : [...prev, genreId]
+        );
+    };
 
     // 获取当前可用的流派和等级
     const getCurrentGenres = (): string[] => {
@@ -64,11 +94,9 @@ export default function VerifySpotifyScreen() {
         if (verifyMethod === "oauth" && oauthData?.topGenres) {
             return oauthData.topGenres;
         }
-        // 导入方式没有流派数据，使用默认的流派列表供用户选择
-        // MVP: 根据播放量推断用户可能喜欢的流派（默认 pop/indie）
+        // 导入方式：使用用户选择的流派
         if (verifyMethod === "import" && importedStats) {
-            // 返回有效的流派名称（可以被 getGenreIds 识别）
-            return ["pop", "indie"];
+            return selectedGenres;
         }
         return [];
     };
@@ -135,6 +163,7 @@ export default function VerifySpotifyScreen() {
         setOauthConnected(false);
         setOauthData(null);
         setImportedStats(null);
+        setSelectedGenres([]);
         setMintSuccess(false);
     };
 
@@ -211,8 +240,65 @@ export default function VerifySpotifyScreen() {
                     </View>
                 )}
 
-                {/* 验证成功后显示铸造按钮 */}
-                {isVerified && genres.length > 0 && !mintSuccess && (
+                {/* 数据导入成功 - 显示统计和流派选择 */}
+                {verifyMethod === "import" && importedStats && !mintSuccess && (
+                    <View className="mb-6">
+                        {/* 播放统计 */}
+                        <View className="mb-4">
+                            <SpotifyStats stats={importedStats} showFullDetails />
+                        </View>
+
+                        {/* 流派选择 */}
+                        <View className="bg-dark-200 rounded-xl p-4 mb-4">
+                            <Text className="text-white font-semibold mb-2">选择要铸造的流派徽章</Text>
+                            <Text className="text-gray-500 text-xs mb-3">
+                                基于你的播放数据，选择最能代表你音乐品味的流派（可多选）
+                            </Text>
+                            <View className="flex-row flex-wrap gap-2">
+                                {AVAILABLE_GENRES.map((genre) => (
+                                    <Pressable
+                                        key={genre.id}
+                                        onPress={() => toggleGenre(genre.id)}
+                                        className={`px-4 py-2 rounded-full border ${selectedGenres.includes(genre.id)
+                                                ? "bg-purple-600 border-purple-500"
+                                                : "bg-dark-50 border-dark-50"
+                                            }`}
+                                    >
+                                        <Text className={`text-sm ${selectedGenres.includes(genre.id)
+                                                ? "text-white"
+                                                : "text-gray-400"
+                                            }`}>
+                                            {genre.emoji} {genre.name}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* 铸造按钮 */}
+                        {selectedGenres.length > 0 && (
+                            <MintBadgeButton
+                                genres={selectedGenres}
+                                suggestedTier={tier}
+                                onSuccess={handleMintSuccess}
+                                onError={(error) => console.error("铸造失败:", error)}
+                            />
+                        )}
+
+                        {selectedGenres.length === 0 && (
+                            <View className="bg-dark-50 rounded-xl p-4">
+                                <Text className="text-gray-500 text-center">请选择至少一个流派以铸造徽章</Text>
+                            </View>
+                        )}
+
+                        <Pressable onPress={handleReset} className="mt-4">
+                            <Text className="text-gray-500 text-center text-sm">重新导入</Text>
+                        </Pressable>
+                    </View>
+                )}
+
+                {/* OAuth/Reclaim 验证成功后显示铸造按钮 */}
+                {isVerified && verifyMethod !== "import" && genres.length > 0 && !mintSuccess && (
                     <View className="mb-6">
                         <View className="bg-dark-200 rounded-xl p-4 mb-4">
                             <Text className="text-gray-400 text-sm mb-2">
