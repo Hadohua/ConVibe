@@ -2,6 +2,7 @@
  * components/ProposalCard.tsx - 提案卡片组件
  * 
  * 显示音乐提案，带投票功能和动画效果
+ * V2: 支持从父组件传入初始投票状态
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -17,20 +18,23 @@ import { Proposal, GENRE_INFO } from "../lib/types/proposal";
 interface ProposalCardProps {
     proposal: Proposal;
     onVote?: (proposalId: string, newVoteCount: number) => void;
+    /** 是否已投票（从后端获取的持久化状态） */
+    hasVoted?: boolean;
 }
 
 // ============================================
 // ProposalCard 组件
 // ============================================
 
-export default function ProposalCard({ proposal, onVote }: ProposalCardProps) {
+export default function ProposalCard({ proposal, onVote, hasVoted: initialHasVoted = false }: ProposalCardProps) {
     const { vote, getVoteWeight } = useVote();
 
     const [voteCount, setVoteCount] = useState(proposal.voteCount);
-    const [hasVoted, setHasVoted] = useState(false);
+    const [hasVoted, setHasVoted] = useState(initialHasVoted);
     const [voteWeight, setVoteWeight] = useState(1);
     const [hasSBT, setHasSBT] = useState(false);
     const [loading, setLoading] = useState(false);
+
 
     // 动画值
     const glowAnim = useRef(new Animated.Value(0)).current;
@@ -229,10 +233,10 @@ export default function ProposalCard({ proposal, onVote }: ProposalCardProps) {
                             onPress={handleVote}
                             disabled={hasVoted || loading}
                             className={`px-4 py-3 rounded-xl ${hasVoted
-                                    ? "bg-gray-700"
-                                    : hasSBT
-                                        ? "bg-yellow-500"
-                                        : "bg-primary-600"
+                                ? "bg-gray-700"
+                                : hasSBT
+                                    ? "bg-yellow-500"
+                                    : "bg-primary-600"
                                 }`}
                             style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
                         >

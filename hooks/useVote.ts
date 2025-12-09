@@ -2,6 +2,7 @@
  * hooks/useVote.ts - 投票逻辑 Hook
  * 
  * 实现加权投票算法，检查用户 SBT 余额
+ * V2: 集成 Supabase 后端持久化
  */
 
 import { useState, useCallback } from "react";
@@ -9,6 +10,7 @@ import { useEmbeddedWallet } from "@privy-io/expo";
 import * as Haptics from "expo-haptics";
 import { publicClient, MUSIC_CONSENSUS_SBT_ADDRESS } from "../lib/web3/client";
 import { MusicConsensusSBTAbi } from "../lib/web3/abi";
+import { submitVote, hasVoted as checkHasVoted } from "../lib/api/votes";
 
 // ============================================
 // 投票权重常量
@@ -32,6 +34,10 @@ export interface VoteResult {
     isGenreMatch: boolean;
     /** 成功 */
     success: boolean;
+    /** 新的总票数 */
+    newVoteCount?: number;
+    /** 错误信息 */
+    error?: string;
 }
 
 export interface UseVoteReturn {
@@ -118,17 +124,27 @@ export function useVote(): UseVoteReturn {
     );
 
     /**
-     * 执行投票
+     * 执行投票 (V2: 集成后端持久化)
      */
     const vote = useCallback(
         async (proposalId: string, genreId: number): Promise<VoteResult> => {
             try {
+                if (!wallet.account?.address) {
+                    return {
+                        weight: 0,
+                        hasSBT: false,
+                        isGenreMatch: false,
+                        success: false,
+                        error: "钱包未连接",
+                    };
+                }
+
                 // 获取权重
                 const { weight, hasSBT } = await getVoteWeight(genreId);
 
                 // 检查是否流派匹配
                 let isGenreMatch = false;
-                if (hasSBT && wallet.account?.address) {
+                if (hasSBT) {
                     const balance = await publicClient.readContract({
                         address: MUSIC_CONSENSUS_SBT_ADDRESS,
                         abi: MusicConsensusSBTAbi,
@@ -138,12 +154,28 @@ export function useVote(): UseVoteReturn {
                     isGenreMatch = (balance as bigint) > 0n;
                 }
 
+                // 提交到后端持久化
+                const voteResponse = await submitVote(
+                    proposalId,
+                    wallet.account.address,
+                    weight,
+                    isGenreMatch
+                );
+
+                if (!voteResponse.success) {
+                    return {
+                        weight: 0,
+                        hasSBT: false,
+                        isGenreMatch: false,
+                        success: false,
+                        error: voteResponse.error || "投票失败",
+                    };
+                }
+
                 // Haptic Feedback
                 if (hasSBT) {
-                    // SBT 用户：更强的震动
                     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 } else {
-                    // 普通用户：轻微震动
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
 
@@ -154,6 +186,7 @@ export function useVote(): UseVoteReturn {
                     hasSBT,
                     isGenreMatch,
                     success: true,
+                    newVoteCount: voteResponse.newVoteCount,
                 };
             } catch (err) {
                 console.error("投票失败:", err);
@@ -162,6 +195,7 @@ export function useVote(): UseVoteReturn {
                     hasSBT: false,
                     isGenreMatch: false,
                     success: false,
+                    error: err instanceof Error ? err.message : "未知错误",
                 };
             }
         },
