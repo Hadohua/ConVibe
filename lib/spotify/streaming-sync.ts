@@ -337,3 +337,128 @@ export async function getRecordCount(userId: string): Promise<number> {
 export function isCloudSyncAvailable(): boolean {
     return isSupabaseConfigured();
 }
+
+/**
+ * 获取按来源分类的记录数量
+ */
+export async function getRecordCountBySource(userId: string): Promise<{
+    jsonImport: number;
+    apiSync: number;
+    total: number;
+}> {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return { jsonImport: 0, apiSync: 0, total: 0 };
+    }
+
+    try {
+        // 获取 JSON 导入记录数
+        const { count: jsonCount } = await supabase
+            .from('streaming_records')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('source', 'json_import');
+
+        // 获取 API 同步记录数
+        const { count: apiCount } = await supabase
+            .from('streaming_records')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('source', 'api_sync');
+
+        return {
+            jsonImport: jsonCount || 0,
+            apiSync: apiCount || 0,
+            total: (jsonCount || 0) + (apiCount || 0),
+        };
+    } catch (error) {
+        console.error('Failed to get record count by source:', error);
+        return { jsonImport: 0, apiSync: 0, total: 0 };
+    }
+}
+
+/**
+ * 主同步函数 - syncStreamingHistory
+ * 
+ * 统一入口点，自动处理 token 刷新和同步逻辑
+ * 
+ * @param userId - 用户 ID (钱包地址)
+ * @returns 同步结果
+ */
+export async function syncStreamingHistory(userId: string): Promise<SyncResult> {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return {
+            success: false,
+            recordsAdded: 0,
+            recordsSkipped: 0,
+            lastPlayedAt: null,
+            error: 'Supabase not configured',
+        };
+    }
+
+    try {
+        // 1. 加载用户的 Spotify token
+        const storedTokens = await loadSpotifyTokens(userId);
+        if (!storedTokens) {
+            return {
+                success: false,
+                recordsAdded: 0,
+                recordsSkipped: 0,
+                lastPlayedAt: null,
+                error: '未找到 Spotify Token，请先连接 Spotify 账户',
+            };
+        }
+
+        // 2. 检查 token 是否过期，自动刷新
+        let accessToken = storedTokens.access_token;
+        const expiresAt = new Date(storedTokens.expires_at);
+
+        if (expiresAt < new Date()) {
+            // Token 已过期，尝试刷新
+            if (!storedTokens.refresh_token) {
+                return {
+                    success: false,
+                    recordsAdded: 0,
+                    recordsSkipped: 0,
+                    lastPlayedAt: null,
+                    error: 'Token 已过期且无法刷新，请重新连接 Spotify',
+                };
+            }
+
+            const refreshedTokens = await refreshAccessToken(storedTokens.refresh_token);
+            if (!refreshedTokens) {
+                return {
+                    success: false,
+                    recordsAdded: 0,
+                    recordsSkipped: 0,
+                    lastPlayedAt: null,
+                    error: 'Token 刷新失败，请重新连接 Spotify',
+                };
+            }
+
+            // 保存新 token
+            await saveSpotifyTokens(userId, refreshedTokens);
+            accessToken = refreshedTokens.accessToken;
+        }
+
+        // 3. 获取上次同步时间，用于增量同步
+        const afterTimestamp = storedTokens.last_sync_at
+            ? new Date(storedTokens.last_sync_at).getTime()
+            : undefined;
+
+        // 4. 执行同步
+        const result = await syncRecentPlays(userId, accessToken, afterTimestamp);
+
+        return result;
+    } catch (error) {
+        console.error('syncStreamingHistory error:', error);
+        return {
+            success: false,
+            recordsAdded: 0,
+            recordsSkipped: 0,
+            lastPlayedAt: null,
+            error: error instanceof Error ? error.message : '同步失败',
+        };
+    }
+}

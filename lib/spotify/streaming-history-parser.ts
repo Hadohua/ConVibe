@@ -375,3 +375,91 @@ export function sortArtistsByMetric(artists: ArtistStats[], metric: SortMetric):
         return b.totalMs - a.totalMs;
     });
 }
+
+// ============================================
+// 数据库查询统计
+// ============================================
+
+import { getSupabase } from '../supabase/client';
+
+/** 数据库记录格式 */
+interface DbStreamingRecord {
+    ts: string;
+    ms_played: number;
+    track_name: string | null;
+    artist_name: string | null;
+    album_name: string | null;
+    spotify_track_uri: string | null;
+    source: 'json_import' | 'api_sync';
+}
+
+/**
+ * 从 Supabase 数据库查询记录并计算统计
+ * 
+ * @param userId - 用户 ID (钱包地址)
+ * @param startDate - 可选，开始日期
+ * @param endDate - 可选，结束日期
+ * @returns 统计结果，若数据库未配置或无数据则返回 null
+ */
+export async function getStatsFromDatabase(
+    userId: string,
+    startDate?: Date,
+    endDate?: Date
+): Promise<StreamingStats | null> {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.log('Supabase not configured, cannot get stats from database');
+        return null;
+    }
+
+    try {
+        // 构建查询
+        let query = supabase
+            .from('streaming_records')
+            .select('ts, ms_played, track_name, artist_name, album_name, spotify_track_uri, source')
+            .eq('user_id', userId)
+            .order('ts', { ascending: false });
+
+        // 添加日期范围过滤
+        if (startDate) {
+            query = query.gte('ts', startDate.toISOString());
+        }
+        if (endDate) {
+            // 包含结束日期的整天
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            query = query.lte('ts', endOfDay.toISOString());
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('Failed to fetch records from database:', error);
+            return null;
+        }
+
+        if (!data || data.length === 0) {
+            console.log('No records found in database');
+            return null;
+        }
+
+        // 将数据库记录转换为 StreamingRecord 格式
+        const records: StreamingRecord[] = (data as DbStreamingRecord[]).map(row => ({
+            ts: row.ts,
+            ms_played: row.ms_played,
+            master_metadata_track_name: row.track_name,
+            master_metadata_album_artist_name: row.artist_name,
+            master_metadata_album_album_name: row.album_name,
+            spotify_track_uri: row.spotify_track_uri,
+        }));
+
+        // 使用现有的解析函数计算统计
+        const stats = parseStreamingHistory(records);
+
+        return stats;
+    } catch (error) {
+        console.error('getStatsFromDatabase error:', error);
+        return null;
+    }
+}
+

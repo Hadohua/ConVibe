@@ -12,18 +12,24 @@ import * as FileSystem from "expo-file-system/legacy";
 import {
     parseStreamingHistory,
     type StreamingStats,
+    type StreamingRecord,
 } from "../lib/spotify/streaming-history-parser";
 import {
     saveStreamingStats,
     loadStreamingStats,
     clearStreamingStats,
 } from "../lib/spotify/streaming-history-storage";
+import {
+    importJsonRecords,
+    isCloudSyncAvailable,
+} from "../lib/spotify/streaming-sync";
+import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
 
 // ============================================
 // 类型定义
 // ============================================
 
-type ImportStatus = "idle" | "selecting" | "parsing" | "success" | "error";
+type ImportStatus = "idle" | "selecting" | "parsing" | "uploading" | "success" | "error";
 
 interface SpotifyDataImportProps {
     onImportComplete?: (stats: StreamingStats) => void;
@@ -38,10 +44,20 @@ export default function SpotifyDataImport({
     onImportComplete,
     onError,
 }: SpotifyDataImportProps) {
+    const wallet = useEmbeddedWallet();
     const [status, setStatus] = useState<ImportStatus>("idle");
     const [stats, setStats] = useState<StreamingStats | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [progress, setProgress] = useState<string>("");
+    const [cloudUploadResult, setCloudUploadResult] = useState<{
+        recordsAdded: number;
+        recordsSkipped: number;
+    } | null>(null);
+
+    // 获取用户 ID (钱包地址)
+    const userId = wallet.status === "connected" && wallet.account
+        ? wallet.account.address
+        : undefined;
 
     /**
      * 加载已保存的数据
@@ -79,6 +95,7 @@ export default function SpotifyDataImport({
             setProgress("正在读取文件...");
 
             const allStats: StreamingStats[] = [];
+            const allRawRecords: StreamingRecord[] = [];
 
             for (let i = 0; i < result.assets.length; i++) {
                 const asset = result.assets[i];
@@ -87,7 +104,11 @@ export default function SpotifyDataImport({
                 // 读取文件内容
                 const content = await FileSystem.readAsStringAsync(asset.uri);
 
-                // 解析 JSON
+                // 保存原始记录用于云端上传
+                const rawRecords: StreamingRecord[] = JSON.parse(content);
+                allRawRecords.push(...rawRecords);
+
+                // 解析 JSON 生成统计
                 const parsed = parseStreamingHistory(content);
                 allStats.push(parsed);
 
@@ -128,8 +149,26 @@ export default function SpotifyDataImport({
             }
 
             // 保存到本地存储
-            setProgress("正在保存...");
+            setProgress("正在保存到本地...");
             await saveStreamingStats(finalStats);
+
+            // 尝试上传到云端
+            if (isCloudSyncAvailable() && userId && allRawRecords.length > 0) {
+                setStatus("uploading");
+                setProgress(`正在上传 ${allRawRecords.length} 条记录到云端...`);
+
+                try {
+                    const uploadResult = await importJsonRecords(userId, allRawRecords);
+                    setCloudUploadResult({
+                        recordsAdded: uploadResult.recordsAdded,
+                        recordsSkipped: uploadResult.recordsSkipped,
+                    });
+                    console.log("Cloud upload complete:", uploadResult);
+                } catch (uploadError) {
+                    console.warn("Cloud upload failed, data saved locally:", uploadError);
+                    // 不影响本地导入成功
+                }
+            }
 
             setStats(finalStats);
             setStatus("success");
@@ -235,13 +274,18 @@ export default function SpotifyDataImport({
                     </View>
                 )}
 
-                {/* 选择/解析中 */}
-                {(status === "selecting" || status === "parsing") && (
+                {/* 选择/解析/上传中 */}
+                {(status === "selecting" || status === "parsing" || status === "uploading") && (
                     <View className="items-center py-6">
                         <ActivityIndicator size="large" color="#9333ea" />
                         <Text className="text-white mt-4">
                             {status === "selecting" ? "选择文件..." : progress}
                         </Text>
+                        {status === "uploading" && (
+                            <Text className="text-gray-500 text-xs mt-2">
+                                ☁️ 同步到云端以启用实时数据合并
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -275,6 +319,27 @@ export default function SpotifyDataImport({
                                 <Text className="text-gray-500 text-xs">歌曲数</Text>
                             </View>
                         </View>
+
+                        {/* 云端同步状态 */}
+                        {cloudUploadResult && (
+                            <View className="bg-green-900/20 border border-green-700/30 rounded-lg p-3 mb-4">
+                                <Text className="text-green-400 text-sm">
+                                    ☁️ 云端同步完成: 新增 {cloudUploadResult.recordsAdded} 条
+                                    {cloudUploadResult.recordsSkipped > 0 && (
+                                        <Text className="text-gray-500">
+                                            ，跳过 {cloudUploadResult.recordsSkipped} 条重复
+                                        </Text>
+                                    )}
+                                </Text>
+                            </View>
+                        )}
+                        {!cloudUploadResult && isCloudSyncAvailable() && userId && (
+                            <View className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3 mb-4">
+                                <Text className="text-yellow-400 text-sm">
+                                    ⚠️ 数据仅保存在本地
+                                </Text>
+                            </View>
+                        )}
 
                         {/* Top 3 Artists */}
                         {stats.topArtists.length > 0 && (

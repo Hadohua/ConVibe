@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, SafeAreaView, StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useEmbeddedWallet } from "@privy-io/expo";
 import SpotifyVerifier, { type VerificationResult } from "../components/SpotifyVerifier";
 import SpotifyConnector from "../components/SpotifyConnector";
 import SpotifyDataImport from "../components/SpotifyDataImport";
@@ -27,6 +28,8 @@ import type { StreamingStats } from "../lib/spotify/streaming-history-parser";
 import type { SpotifyTokens } from "../lib/spotify/spotify-auth";
 import { calculateTierFromPlaytime } from "../lib/spotify/streaming-history-parser";
 import { TIER, type TierLevel } from "../lib/consensus/tier-calculator";
+import { saveSpotifyTokens } from "../lib/spotify/streaming-sync";
+import { getStatsFromDatabase } from "../lib/spotify/streaming-history-parser";
 
 // ============================================
 // Tab 类型定义
@@ -68,6 +71,7 @@ interface SpotifyData {
 
 export default function MusicVibeDetail() {
     const router = useRouter();
+    const wallet = useEmbeddedWallet();
     const [activeTab, setActiveTab] = useState<TabType>("verify");
 
     // 验证方式
@@ -83,6 +87,8 @@ export default function MusicVibeDetail() {
     // 时间范围过滤状态
     const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
     const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
+    const [filteredStats, setFilteredStats] = useState<StreamingStats | null>(null);
+    const [isLoadingFilteredStats, setIsLoadingFilteredStats] = useState(false);
 
     // 铸造状态
     const [mintSuccess, setMintSuccess] = useState(false);
@@ -158,11 +164,24 @@ export default function MusicVibeDetail() {
         setReclaimResult(result);
     }, []);
 
-    const handleOAuthConnect = useCallback((data: SpotifyData, tokens: SpotifyTokens) => {
+    const handleOAuthConnect = useCallback(async (data: SpotifyData, tokens: SpotifyTokens) => {
         console.log("OAuth 连接完成:", data);
         setOauthConnected(true);
         setOauthData(data);
-    }, []);
+
+        // 保存 tokens 到 Supabase 以支持实时同步
+        const userId = wallet.status === "connected" && wallet.account
+            ? wallet.account.address
+            : undefined;
+        if (userId && tokens) {
+            try {
+                await saveSpotifyTokens(userId, tokens);
+                console.log("✅ Spotify tokens 已保存到 Supabase");
+            } catch (error) {
+                console.warn("保存 Spotify tokens 失败:", error);
+            }
+        }
+    }, [wallet]);
 
     const handleImportComplete = useCallback((stats: StreamingStats) => {
         console.log("导入完成:", stats);
@@ -357,11 +376,39 @@ export default function MusicVibeDetail() {
         const dataStartDate = importedStats?.firstStream ? new Date(importedStats.firstStream) : null;
         const dataEndDate = importedStats?.lastStream ? new Date(importedStats.lastStream) : null;
 
-        // 日期范围变化处理
-        const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+        // 日期范围变化处理 - 从数据库郍新查询
+        const handleDateRangeChange = async (start: Date | null, end: Date | null) => {
             setDateRangeStart(start);
             setDateRangeEnd(end);
-            // TODO: 当有原始记录时，应重新过滤并生成统计
+
+            // 获取用户 ID
+            const userId = wallet.status === "connected" && wallet.account
+                ? wallet.account.address
+                : undefined;
+
+            if (!userId) {
+                console.log("未连接钱包，无法查询过滤数据");
+                setFilteredStats(null);
+                return;
+            }
+
+            // 如果没有选择日期范围，清除过滤结果（显示全部数据）
+            if (!start && !end) {
+                setFilteredStats(null);
+                return;
+            }
+
+            setIsLoadingFilteredStats(true);
+            try {
+                const stats = await getStatsFromDatabase(userId, start || undefined, end || undefined);
+                setFilteredStats(stats);
+                console.log("过滤结果:", stats ? `${stats.totalStreams} 条记录` : "无数据");
+            } catch (error) {
+                console.error("获取过滤数据失败:", error);
+                setFilteredStats(null);
+            } finally {
+                setIsLoadingFilteredStats(false);
+            }
         };
 
         return (
@@ -420,17 +467,39 @@ export default function MusicVibeDetail() {
                             </View>
                         )}
 
-                        {/* 统计概览 */}
-                        <SpotifyStats stats={importedStats} showFullDetails />
+                        {/* 加载状态 */}
+                        {isLoadingFilteredStats && (
+                            <View style={styles.loadingOverlay}>
+                                <Text style={styles.loadingText}>正在加载筛选数据...</Text>
+                            </View>
+                        )}
 
-                        {/* 排行榜（带排序切换） */}
-                        <View style={{ marginTop: 16 }}>
-                            <LeaderboardList
-                                topTracks={importedStats.topTracks}
-                                topArtists={importedStats.topArtists}
-                                limit={15}
-                            />
-                        </View>
+                        {/* 统计概览 - 使用过滤后的数据或原始数据 */}
+                        {(() => {
+                            const displayStats = filteredStats || importedStats;
+                            const isFiltered = !!filteredStats && (dateRangeStart || dateRangeEnd);
+                            return (
+                                <>
+                                    {isFiltered && (
+                                        <View style={styles.filterIndicator}>
+                                            <Text style={styles.filterIndicatorText}>
+                                                📅 显示筛选范围内的 {displayStats?.totalStreams.toLocaleString()} 条记录
+                                            </Text>
+                                        </View>
+                                    )}
+                                    <SpotifyStats stats={displayStats!} showFullDetails />
+
+                                    {/* 排行榜（带排序切换） */}
+                                    <View style={{ marginTop: 16 }}>
+                                        <LeaderboardList
+                                            topTracks={displayStats!.topTracks}
+                                            topArtists={displayStats!.topArtists}
+                                            limit={15}
+                                        />
+                                    </View>
+                                </>
+                            );
+                        })()}
                     </>
                 ) : oauthData && oauthConnected ? (
                     /* OAuth 连接但未导入时显示简要数据 */
@@ -657,4 +726,8 @@ const styles = StyleSheet.create({
     oauthArtistPop: { color: "#f97316", fontSize: 12 },
     importPrompt: { backgroundColor: "rgba(139, 92, 246, 0.1)", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.2)" },
     importPromptText: { color: "#a78bfa", fontSize: 13, marginBottom: 12 },
+    loadingOverlay: { backgroundColor: "rgba(0, 0, 0, 0.3)", borderRadius: 12, padding: 16, marginBottom: 12, alignItems: "center" as const },
+    loadingText: { color: "#a78bfa", fontSize: 14 },
+    filterIndicator: { backgroundColor: "rgba(34, 197, 94, 0.1)", borderRadius: 8, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: "rgba(34, 197, 94, 0.3)" },
+    filterIndicatorText: { color: "#22c55e", fontSize: 13, textAlign: "center" as const },
 });

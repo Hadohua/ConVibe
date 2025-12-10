@@ -4,7 +4,7 @@
  * 显示同步状态并提供手动同步按钮
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
 import {
@@ -14,6 +14,7 @@ import {
     refreshAccessToken,
     saveSpotifyTokens,
     getRecordCount,
+    getRecordCountBySource,
     type SyncResult,
 } from "../../lib/spotify/streaming-sync";
 
@@ -40,7 +41,12 @@ export default function SyncStatusCard({
     const wallet = useEmbeddedWallet();
     const [syncing, setSyncing] = useState(false);
     const [lastResult, setLastResult] = useState<SyncResult | null>(null);
-    const [recordCount, setRecordCount] = useState<number | null>(null);
+    const [recordStats, setRecordStats] = useState<{
+        jsonImport: number;
+        apiSync: number;
+        total: number;
+    } | null>(null);
+    const [loading, setLoading] = useState(true);
 
     // 获取用户 ID (钱包地址)
     const userId = wallet.status === "connected" && wallet.account
@@ -49,6 +55,18 @@ export default function SyncStatusCard({
 
     // 检查是否可用
     const isAvailable = isCloudSyncAvailable() && !!userId;
+
+    // 初始化加载记录统计
+    useEffect(() => {
+        if (userId && isCloudSyncAvailable()) {
+            getRecordCountBySource(userId).then(stats => {
+                setRecordStats(stats);
+                setLoading(false);
+            }).catch(() => setLoading(false));
+        } else {
+            setLoading(false);
+        }
+    }, [userId]);
 
     // 格式化时间
     const formatTime = (date: Date | null | undefined): string => {
@@ -108,9 +126,9 @@ export default function SyncStatusCard({
             setLastResult(result);
             onSyncComplete?.(result);
 
-            // 更新记录数
-            const count = await getRecordCount(userId);
-            setRecordCount(count);
+            // 更新记录统计
+            const stats = await getRecordCountBySource(userId);
+            setRecordStats(stats);
         } catch (error) {
             setLastResult({
                 success: false,
@@ -190,11 +208,29 @@ export default function SyncStatusCard({
                 </Pressable>
             </View>
 
-            {/* 记录数量 */}
-            {recordCount !== null && (
-                <Text className="text-gray-500 text-sm mb-2">
-                    云端已存储 {recordCount.toLocaleString()} 条播放记录
-                </Text>
+            {/* 记录数量 - 按来源显示 */}
+            {recordStats !== null && recordStats.total > 0 && (
+                <View className="mb-3">
+                    <Text className="text-gray-400 text-sm mb-1">
+                        ☁️ 云端已存储 {recordStats.total.toLocaleString()} 条播放记录
+                    </Text>
+                    <View className="flex-row gap-3">
+                        {recordStats.jsonImport > 0 && (
+                            <View className="bg-purple-900/20 px-2 py-1 rounded">
+                                <Text className="text-purple-400 text-xs">
+                                    📂 历史导入 {recordStats.jsonImport.toLocaleString()}
+                                </Text>
+                            </View>
+                        )}
+                        {recordStats.apiSync > 0 && (
+                            <View className="bg-green-900/20 px-2 py-1 rounded">
+                                <Text className="text-green-400 text-xs">
+                                    🔄 实时同步 {recordStats.apiSync.toLocaleString()}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
             )}
 
             {/* 同步结果 */}

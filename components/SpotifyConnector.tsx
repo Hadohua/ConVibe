@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator, Image, ScrollView } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
     getSpotifyClientId,
     SPOTIFY_SCOPES,
@@ -60,6 +61,11 @@ export default function SpotifyConnector({
         topGenres: [],
     });
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [isRestoring, setIsRestoring] = useState(true);
+
+    // AsyncStorage keys
+    const STORAGE_KEY_TOKENS = "spotify_oauth_tokens";
+    const STORAGE_KEY_DATA = "spotify_oauth_data";
 
     // 生成 Redirect URI - Expo Go 需要使用特定格式
     const redirectUri = AuthSession.makeRedirectUri({
@@ -72,6 +78,40 @@ export default function SpotifyConnector({
         console.log(redirectUri);
         console.log("请将此 URI 添加到 Spotify Developer Dashboard!");
     }, [redirectUri]);
+
+    // 恢复保存的 OAuth 状态
+    useEffect(() => {
+        const restoreSession = async () => {
+            try {
+                const [storedTokensStr, storedDataStr] = await Promise.all([
+                    AsyncStorage.getItem(STORAGE_KEY_TOKENS),
+                    AsyncStorage.getItem(STORAGE_KEY_DATA),
+                ]);
+
+                if (storedTokensStr && storedDataStr) {
+                    const storedTokens: SpotifyTokens = JSON.parse(storedTokensStr);
+                    const storedData: SpotifyData = JSON.parse(storedDataStr);
+
+                    // 检查 token 是否过期
+                    if (new Date(storedTokens.expiresAt) > new Date()) {
+                        setTokens(storedTokens);
+                        setSpotifyData(storedData);
+                        setStatus("connected");
+                        onConnect?.(storedData, storedTokens);
+                        console.log("✅ 恢复 Spotify 连接:", storedData.profile?.display_name);
+                    } else {
+                        console.log("⚠️ Spotify token 已过期，需要重新授权");
+                        await AsyncStorage.multiRemove([STORAGE_KEY_TOKENS, STORAGE_KEY_DATA]);
+                    }
+                }
+            } catch (error) {
+                console.error("恢复 Spotify 会话失败:", error);
+            } finally {
+                setIsRestoring(false);
+            }
+        };
+        restoreSession();
+    }, []);
 
     // OAuth 请求配置
     const clientId = getSpotifyClientId();
@@ -170,9 +210,16 @@ export default function SpotifyConnector({
             setSpotifyData(data);
             setStatus("connected");
 
-            // 回调 - 使用传入的 tokens 或状态中的 tokens
+            // 保存到 AsyncStorage 以便下次恢复
             const tokensToUse = passedTokens || tokens;
             if (tokensToUse) {
+                try {
+                    await AsyncStorage.setItem(STORAGE_KEY_TOKENS, JSON.stringify(tokensToUse));
+                    await AsyncStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
+                    console.log("✅ Spotify OAuth 状态已保存");
+                } catch (saveError) {
+                    console.warn("保存 Spotify 状态失败:", saveError);
+                }
                 onConnect?.(data, tokensToUse);
             }
 
@@ -200,7 +247,15 @@ export default function SpotifyConnector({
     /**
      * 断开连接
      */
-    const handleDisconnect = useCallback(() => {
+    const handleDisconnect = useCallback(async () => {
+        // 清除 AsyncStorage 中保存的状态
+        try {
+            await AsyncStorage.multiRemove([STORAGE_KEY_TOKENS, STORAGE_KEY_DATA]);
+            console.log("🗑️ Spotify OAuth 状态已清除");
+        } catch (error) {
+            console.warn("清除 Spotify 状态失败:", error);
+        }
+
         setStatus("disconnected");
         setTokens(null);
         setSpotifyData({
