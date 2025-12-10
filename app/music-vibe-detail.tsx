@@ -19,6 +19,9 @@ import MintBadgeButton from "../components/MintBadgeButton";
 import UserBadges from "../components/UserBadges";
 import ConsensusFeed from "../components/ConsensusFeed";
 import CVIBBalanceCard from "../components/CVIBBalanceCard";
+import DateRangePicker from "../components/stats/DateRangePicker";
+import LeaderboardList from "../components/stats/LeaderboardList";
+import SyncStatusCard from "../components/stats/SyncStatusCard";
 import { calculateCVIBFromStats } from "../lib/consensus/tier-calculator";
 import type { StreamingStats } from "../lib/spotify/streaming-history-parser";
 import type { SpotifyTokens } from "../lib/spotify/spotify-auth";
@@ -76,6 +79,10 @@ export default function MusicVibeDetail() {
     const [oauthData, setOauthData] = useState<SpotifyData | null>(null);
     const [importedStats, setImportedStats] = useState<StreamingStats | null>(null);
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+    // 时间范围过滤状态
+    const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
+    const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
 
     // 铸造状态
     const [mintSuccess, setMintSuccess] = useState(false);
@@ -345,21 +352,97 @@ export default function MusicVibeDetail() {
     );
 
     // 渲染统计 Tab
-    const renderStatsTab = () => (
-        <View style={styles.tabContent}>
-            {/* 有导入数据时显示完整统计 */}
-            {importedStats ? (
-                <>
-                    <View style={styles.dataSourceBadge}>
-                        <Text style={styles.dataSourceText}>📊 数据来源: Spotify 数据导出</Text>
-                    </View>
+    const renderStatsTab = () => {
+        // 计算数据的时间范围
+        const dataStartDate = importedStats?.firstStream ? new Date(importedStats.firstStream) : null;
+        const dataEndDate = importedStats?.lastStream ? new Date(importedStats.lastStream) : null;
 
-                    {/* 如果也有 OAuth 数据，先显示用户偏好 */}
-                    {oauthData && oauthConnected && (
-                        <View style={[styles.oauthStatsCard, { marginBottom: 16 }]}>
+        // 日期范围变化处理
+        const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+            setDateRangeStart(start);
+            setDateRangeEnd(end);
+            // TODO: 当有原始记录时，应重新过滤并生成统计
+        };
+
+        return (
+            <View style={styles.tabContent}>
+                {/* 有导入数据时显示完整统计 */}
+                {importedStats ? (
+                    <>
+                        <View style={styles.dataSourceBadge}>
+                            <Text style={styles.dataSourceText}>📊 数据来源: Spotify 数据导出</Text>
+                        </View>
+
+                        {/* 时间范围选择器 */}
+                        <DateRangePicker
+                            dataStartDate={dataStartDate}
+                            dataEndDate={dataEndDate}
+                            startDate={dateRangeStart}
+                            endDate={dateRangeEnd}
+                            onRangeChange={handleDateRangeChange}
+                        />
+
+                        {/* 实时同步状态 */}
+                        <SyncStatusCard />
+
+                        {/* 如果也有 OAuth 数据，先显示用户偏好 */}
+                        {oauthData && oauthConnected && (
+                            <View style={[styles.oauthStatsCard, { marginBottom: 16 }]}>
+                                <Text style={styles.oauthStatsTitle}>
+                                    {oauthData.profile?.display_name || '用户'} 的音乐偏好
+                                </Text>
+                                {/* Top 流派 */}
+                                {oauthData.topGenres && oauthData.topGenres.length > 0 && (
+                                    <View style={styles.oauthSection}>
+                                        <Text style={styles.oauthSectionLabel}>热门流派</Text>
+                                        <View style={styles.genreChips}>
+                                            {oauthData.topGenres.slice(0, 5).map((genre, i) => (
+                                                <View key={i} style={styles.genreChip}>
+                                                    <Text style={styles.genreChipText}>{genre}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                )}
+                                {/* Top 艺人 */}
+                                {oauthData.topArtists && oauthData.topArtists.length > 0 && (
+                                    <View style={styles.oauthSection}>
+                                        <Text style={styles.oauthSectionLabel}>热门艺人</Text>
+                                        {oauthData.topArtists.slice(0, 5).map((artist, i) => (
+                                            <View key={i} style={styles.oauthArtistRow}>
+                                                <Text style={styles.oauthArtistRank}>#{i + 1}</Text>
+                                                <Text style={styles.oauthArtistName}>{artist.name}</Text>
+                                                <Text style={styles.oauthArtistPop}>🔥 {artist.popularity}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* 统计概览 */}
+                        <SpotifyStats stats={importedStats} showFullDetails />
+
+                        {/* 排行榜（带排序切换） */}
+                        <View style={{ marginTop: 16 }}>
+                            <LeaderboardList
+                                topTracks={importedStats.topTracks}
+                                topArtists={importedStats.topArtists}
+                                limit={15}
+                            />
+                        </View>
+                    </>
+                ) : oauthData && oauthConnected ? (
+                    /* OAuth 连接但未导入时显示简要数据 */
+                    <>
+                        <View style={styles.dataSourceBadge}>
+                            <Text style={styles.dataSourceText}>🔗 数据来源: Spotify OAuth</Text>
+                        </View>
+                        <View style={styles.oauthStatsCard}>
                             <Text style={styles.oauthStatsTitle}>
                                 {oauthData.profile?.display_name || '用户'} 的音乐偏好
                             </Text>
+
                             {/* Top 流派 */}
                             {oauthData.topGenres && oauthData.topGenres.length > 0 && (
                                 <View style={styles.oauthSection}>
@@ -373,6 +456,7 @@ export default function MusicVibeDetail() {
                                     </View>
                                 </View>
                             )}
+
                             {/* Top 艺人 */}
                             {oauthData.topArtists && oauthData.topArtists.length > 0 && (
                                 <View style={styles.oauthSection}>
@@ -387,70 +471,27 @@ export default function MusicVibeDetail() {
                                 </View>
                             )}
                         </View>
-                    )}
 
-                    {/* 然后显示导入的详细统计 */}
-                    <SpotifyStats stats={importedStats} showFullDetails />
-                </>
-            ) : oauthData && oauthConnected ? (
-                /* OAuth 连接但未导入时显示简要数据 */
-                <>
-                    <View style={styles.dataSourceBadge}>
-                        <Text style={styles.dataSourceText}>🔗 数据来源: Spotify OAuth</Text>
-                    </View>
-                    <View style={styles.oauthStatsCard}>
-                        <Text style={styles.oauthStatsTitle}>
-                            {oauthData.profile?.display_name || '用户'} 的音乐偏好
-                        </Text>
-
-                        {/* Top 流派 */}
-                        {oauthData.topGenres && oauthData.topGenres.length > 0 && (
-                            <View style={styles.oauthSection}>
-                                <Text style={styles.oauthSectionLabel}>热门流派</Text>
-                                <View style={styles.genreChips}>
-                                    {oauthData.topGenres.slice(0, 5).map((genre, i) => (
-                                        <View key={i} style={styles.genreChip}>
-                                            <Text style={styles.genreChipText}>{genre}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Top 艺人 */}
-                        {oauthData.topArtists && oauthData.topArtists.length > 0 && (
-                            <View style={styles.oauthSection}>
-                                <Text style={styles.oauthSectionLabel}>热门艺人</Text>
-                                {oauthData.topArtists.slice(0, 5).map((artist, i) => (
-                                    <View key={i} style={styles.oauthArtistRow}>
-                                        <Text style={styles.oauthArtistRank}>#{i + 1}</Text>
-                                        <Text style={styles.oauthArtistName}>{artist.name}</Text>
-                                        <Text style={styles.oauthArtistPop}>🔥 {artist.popularity}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-
-                    {/* 提示导入获取更多数据 */}
-                    <View style={styles.importPrompt}>
-                        <Text style={styles.importPromptText}>
-                            💡 导入 Spotify 数据包可获取详细的听歌时长和更准确的统计
+                        {/* 提示导入获取更多数据 */}
+                        <View style={styles.importPrompt}>
+                            <Text style={styles.importPromptText}>
+                                💡 导入 Spotify 数据包可获取详细的听歌时长和更准确的统计
+                            </Text>
+                            <SpotifyDataImport onImportComplete={handleImportComplete} />
+                        </View>
+                    </>
+                ) : (
+                    /* 未验证时显示导入入口 */
+                    <>
+                        <Text style={styles.tabDescription}>
+                            导入 Spotify 数据包，解锁详细统计和高级徽章
                         </Text>
                         <SpotifyDataImport onImportComplete={handleImportComplete} />
-                    </View>
-                </>
-            ) : (
-                /* 未验证时显示导入入口 */
-                <>
-                    <Text style={styles.tabDescription}>
-                        导入 Spotify 数据包，解锁详细统计和高级徽章
-                    </Text>
-                    <SpotifyDataImport onImportComplete={handleImportComplete} />
-                </>
-            )}
-        </View>
-    );
+                    </>
+                )}
+            </View>
+        );
+    };
 
     // 渲染共识 Tab
     const renderConsensusTab = () => (

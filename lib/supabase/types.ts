@@ -74,6 +74,50 @@ export interface Database {
                 Insert: Omit<DbVote, "id" | "created_at">;
                 Update: Partial<DbVote>;
             };
+            streaming_records: {
+                Row: DbStreamingRecord;
+                Insert: Omit<DbStreamingRecord, "id" | "created_at">;
+                Update: Partial<DbStreamingRecord>;
+            };
+            user_spotify_tokens: {
+                Row: DbUserSpotifyTokens;
+                Insert: Omit<DbUserSpotifyTokens, "created_at" | "updated_at">;
+                Update: Partial<DbUserSpotifyTokens>;
+            };
         };
     };
 }
+
+// ============================================
+// 流媒体同步相关表
+// ============================================
+
+/**
+ * streaming_records 表 - 流媒体播放记录
+ */
+export interface DbStreamingRecord {
+    id: string;
+    user_id: string;
+    ts: string; // ISO timestamp
+    ms_played: number;
+    track_name: string | null;
+    artist_name: string | null;
+    album_name: string | null;
+    spotify_track_uri: string | null;
+    source: 'json_import' | 'api_sync';
+    created_at: string;
+}
+
+/**
+ * user_spotify_tokens 表 - Spotify Token 存储
+ */
+export interface DbUserSpotifyTokens {
+    user_id: string;
+    access_token: string;
+    refresh_token: string | null;
+    expires_at: string;
+    last_sync_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+

@@ -171,3 +171,78 @@ export function getTopGenres(artists: SpotifyArtist[], count: number = 5): strin
         .slice(0, count)
         .map(([genre]) => genre);
 }
+
+// ============================================
+// Recently Played API (for real-time sync)
+// ============================================
+
+/** 最近播放的单条记录 */
+export interface RecentlyPlayedItem {
+    track: SpotifyTrack;
+    played_at: string; // ISO 8601 timestamp
+    context: {
+        type: string;
+        uri: string;
+    } | null;
+}
+
+/** Recently Played API 响应 */
+export interface RecentlyPlayedResponse {
+    items: RecentlyPlayedItem[];
+    next: string | null;
+    cursors: {
+        after: string;
+        before: string;
+    };
+    limit: number;
+}
+
+/**
+ * 获取用户最近播放的曲目
+ * 
+ * 用于实时同步听歌记录
+ * 
+ * @param accessToken - Spotify Access Token
+ * @param limit - 返回数量（1-50，默认 50）
+ * @param after - Unix 时间戳（毫秒），返回该时间之后的记录
+ * @param before - Unix 时间戳（毫秒），返回该时间之前的记录
+ */
+export async function getRecentlyPlayed(
+    accessToken: string,
+    limit: number = 50,
+    after?: number,
+    before?: number
+): Promise<RecentlyPlayedResponse> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (after) params.set('after', String(after));
+    if (before) params.set('before', String(before));
+
+    return spotifyFetch<RecentlyPlayedResponse>(
+        `/me/player/recently-played?${params}`,
+        accessToken
+    );
+}
+
+/**
+ * 将 RecentlyPlayedItem 转换为 StreamingRecord 格式
+ * 用于与 JSON 导入数据统一格式
+ */
+export function convertRecentlyPlayedToRecord(item: RecentlyPlayedItem): {
+    ts: string;
+    ms_played: number;
+    track_name: string | null;
+    artist_name: string | null;
+    album_name: string | null;
+    spotify_track_uri: string | null;
+} {
+    return {
+        ts: item.played_at,
+        // API 不提供精确播放时长，使用曲目时长作为估算
+        ms_played: item.track.duration_ms,
+        track_name: item.track.name,
+        artist_name: item.track.artists[0]?.name ?? null,
+        album_name: item.track.album.name,
+        spotify_track_uri: `spotify:track:${item.track.id}`,
+    };
+}
+

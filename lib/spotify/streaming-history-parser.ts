@@ -290,3 +290,88 @@ export function calculateTierFromPlaytime(hoursPlayed: number): 1 | 2 | 3 {
     if (hoursPlayed >= 3) return 2;  // VETERAN
     return 1; // ENTRY
 }
+
+// ============================================
+// 时间范围过滤
+// ============================================
+
+/**
+ * 根据日期范围过滤播放记录
+ * 
+ * @param records - 原始播放记录数组
+ * @param startDate - 开始日期（包含），null 表示不限
+ * @param endDate - 结束日期（包含），null 表示不限
+ * @returns 过滤后的记录数组
+ */
+export function filterRecordsByDateRange(
+    records: StreamingRecord[],
+    startDate: Date | null,
+    endDate: Date | null
+): StreamingRecord[] {
+    if (!startDate && !endDate) {
+        return records;
+    }
+
+    return records.filter(record => {
+        const recordDate = new Date(record.ts);
+
+        if (startDate && recordDate < startDate) {
+            return false;
+        }
+        if (endDate) {
+            // 包含结束日期的整天
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            if (recordDate > endOfDay) {
+                return false;
+            }
+        }
+        return true;
+    });
+}
+
+/**
+ * 解析带时间范围过滤的统计数据
+ * 
+ * @param records - 原始播放记录数组
+ * @param startDate - 开始日期
+ * @param endDate - 结束日期
+ */
+export function parseStreamingHistoryWithFilter(
+    records: StreamingRecord[],
+    startDate: Date | null,
+    endDate: Date | null
+): StreamingStats {
+    const filtered = filterRecordsByDateRange(records, startDate, endDate);
+    return parseStreamingHistory(filtered);
+}
+
+// ============================================
+// 排序工具函数
+// ============================================
+
+export type SortMetric = 'streamCount' | 'totalMs';
+
+/**
+ * 根据指定指标排序曲目列表
+ */
+export function sortTracksByMetric(tracks: TrackStats[], metric: SortMetric): TrackStats[] {
+    return [...tracks].sort((a, b) => {
+        if (metric === 'streamCount') {
+            return b.streamCount - a.streamCount;
+        }
+        return b.totalMs - a.totalMs;
+    });
+}
+
+/**
+ * 根据指定指标排序艺人列表
+ */
+export function sortArtistsByMetric(artists: ArtistStats[], metric: SortMetric): ArtistStats[] {
+    return [...artists].sort((a, b) => {
+        if (metric === 'streamCount') {
+            return b.streamCount - a.streamCount;
+        }
+        return b.totalMs - a.totalMs;
+    });
+}

@@ -33,7 +33,8 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
 | 🎵 **三重验证** | OAuth / 数据导入 / Reclaim zkTLS 零知识证明 |
 | 💎 **$CVB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
 | 🏆 **分层 SBT 徽章** | 入门 / 资深 / OG 三级徽章体系 |
-| 📊 **听歌统计** | 导入 Spotify 数据包，查看详细统计 |
+| 📊 **Stats.fm 风格统计** | 自定义时间范围 + 双重排序 (按次数/按时长) |
+| ☁️ **云端实时同步** | Spotify API 增量更新 + JSON 历史导入 |
 | 📋 **钱包管理** | 一键复制钱包地址，查看余额 |
 | 🔥 **共识社区** | 基于徽章的门控内容和投票系统 |
 
@@ -87,6 +88,12 @@ ConVibe 引入 **$CVB (Convibe Token)** 作为平台的核心代币：
 └───────────────┬─────────────────────────────────────────────┘
                 │
 ┌───────────────▼─────────────────────────────────────────────┐
+│                        数据同步层                            │
+├─────────────────────────────────────────────────────────────┤
+│   Supabase (实时同步)  │  Spotify API (增量更新)              │
+└───────────────┬─────────────────────────────────────────────┘
+                │
+┌───────────────▼─────────────────────────────────────────────┐
 │                        区块链 (Base Sepolia)                 │
 ├─────────────────────────────────────────────────────────────┤
 │  VibeToken ($CVB)   │  MusicConsensusSBT V4  │   Viem          │
@@ -134,6 +141,10 @@ EXPO_PUBLIC_PRIVY_CLIENT_ID=your_privy_client_id
 EXPO_PUBLIC_RECLAIM_APP_ID=your_reclaim_app_id
 EXPO_PUBLIC_RECLAIM_APP_SECRET=your_reclaim_app_secret
 EXPO_PUBLIC_RECLAIM_PROVIDER_ID=your_reclaim_provider_id
+
+# Supabase (可选，启用云端同步)
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ---
@@ -177,7 +188,11 @@ ConVibe/
 │   ├── MintBadgeButton.tsx # 铸造徽章按钮
 │   ├── SpotifyStats.tsx    # 统计展示
 │   ├── SpotifyConnector.tsx # OAuth 连接
-│   └── UserBadges.tsx      # 用户徽章展示
+│   ├── UserBadges.tsx      # 用户徽章展示
+│   └── stats/              # Stats.fm 风格组件
+│       ├── DateRangePicker.tsx  # 时间范围选择器
+│       ├── LeaderboardList.tsx  # 排行榜 (双重排序)
+│       └── SyncStatusCard.tsx   # 云端同步状态
 ├── contracts/              # Solidity 智能合约
 │   ├── VibeToken.sol       # $CVIB 代币
 │   └── MusicConsensusSBTV4.sol  # SBT 徽章 V4
@@ -185,13 +200,12 @@ ConVibe/
 │   └── useMintSBT.ts       # SBT 铸造逻辑
 ├── lib/                    # 工具库
 │   ├── web3/               # 区块链相关
-│   ├── spotify/            # Spotify 数据解析
-│   ├── api/                # API 模块 ($CVB 领取等)
+│   ├── spotify/            # Spotify 数据解析 + 同步
+│   ├── supabase/           # 云端数据库
 │   └── consensus/          # $CVB 计算逻辑
 └── scripts/                # 部署脚本
-    ├── mint-cvib.js        # 手动发放 $CVB
-    ├── deploy-sbt-v4.js    # 部署 V4 合约
-    └── deploy-convibe-token.js  # 部署代币合约
+    ├── supabase-migration-streaming.sql  # 数据库迁移
+    └── deploy-sbt-v4.js    # 部署 V4 合约
 ```
 
 ---
@@ -202,8 +216,8 @@ ConVibe/
 |------|------|------|
 | **Phase 1** | Spotify 音乐验证 + SBT 铸造 | ✅ 已完成 |
 | **Phase 2** | $CVIB 经济模型 | ✅ 已完成 |
-| **Phase 3** | 泛文化扩展 (Netflix, Steam, Kindle) | 🔜 规划中 |
-| **Phase 4** | 去中心化存储 (IPFS/Arweave) | 🔜 规划中 |
+| **Phase 3** | Stats.fm 风格数据展示 + 云端同步 | ✅ 已完成 |
+| **Phase 4** | 泛文化扩展 (Netflix, Steam, Kindle) | 🔜 规划中 |
 
 ---
 
