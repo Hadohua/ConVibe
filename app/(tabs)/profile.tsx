@@ -5,6 +5,7 @@
  */
 
 import { View, Text, Pressable, Alert, ScrollView } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
 import UserBadges from "../../components/UserBadges";
@@ -50,6 +51,16 @@ export default function ProfileScreen() {
                 },
             ]
         );
+    };
+
+    /**
+     * 复制钱包地址
+     */
+    const handleCopyAddress = async () => {
+        if (wallet.account?.address) {
+            await Clipboard.setStringAsync(wallet.account.address);
+            Alert.alert("✅ 已复制", "钱包地址已复制到剪贴板");
+        }
     };
 
     // 获取所有关联账户 - 使用更灵活的类型
@@ -104,10 +115,19 @@ export default function ProfileScreen() {
 
                             <View>
                                 <Text className="text-gray-400 text-sm mb-2">地址</Text>
-                                <View className="bg-dark-50 rounded-lg p-3">
-                                    <Text className="text-vibe-purple font-mono text-xs">
-                                        {wallet.account.address}
-                                    </Text>
+                                <View className="flex-row items-center">
+                                    <View className="bg-dark-50 rounded-lg p-3 flex-1">
+                                        <Text className="text-vibe-purple font-mono text-xs">
+                                            {wallet.account.address}
+                                        </Text>
+                                    </View>
+                                    <Pressable
+                                        onPress={handleCopyAddress}
+                                        className="bg-vibe-purple/20 ml-2 px-3 py-3 rounded-lg"
+                                        style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+                                    >
+                                        <Text className="text-vibe-purple text-sm">📋 复制</Text>
+                                    </Pressable>
                                 </View>
                             </View>
                         </View>

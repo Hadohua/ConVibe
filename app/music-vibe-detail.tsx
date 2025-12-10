@@ -81,6 +81,23 @@ export default function MusicVibeDetail() {
     const [mintSuccess, setMintSuccess] = useState(false);
     const [badgeRefreshKey, setBadgeRefreshKey] = useState(0);
 
+    // CVIB 领取状态
+    const [claiming, setClaiming] = useState(false);
+    const [cvibClaimed, setCvibClaimed] = useState(false);
+
+    // 处理 CVIB 领取 (MVP: 提示用户使用脚本)
+    const handleClaimCVIB = useCallback(async () => {
+        setClaiming(true);
+        // TODO: 实际实现需要后端 API
+        // 目前显示提示信息
+        setTimeout(() => {
+            setClaiming(false);
+            setCvibClaimed(true);
+            setBadgeRefreshKey(prev => prev + 1);
+            alert('MVP 阶段: 请联系管理员使用 mint-cvib.js 脚本为你铸造 $CVB。成功后即可铸造徽章。');
+        }, 1000);
+    }, []);
+
     // 切换流派选择
     const toggleGenre = (genreId: string) => {
         setSelectedGenres(prev =>
@@ -180,6 +197,9 @@ export default function MusicVibeDetail() {
             <CVIBBalanceCard
                 refreshKey={badgeRefreshKey}
                 estimatedCVIB={isVerified ? getEstimatedCVIB() : undefined}
+                showClaimButton={isVerified && !cvibClaimed}
+                claiming={claiming}
+                onClaimPress={handleClaimCVIB}
             />
 
             {/* 我的徽章 */}
@@ -333,6 +353,43 @@ export default function MusicVibeDetail() {
                     <View style={styles.dataSourceBadge}>
                         <Text style={styles.dataSourceText}>📊 数据来源: Spotify 数据导出</Text>
                     </View>
+
+                    {/* 如果也有 OAuth 数据，先显示用户偏好 */}
+                    {oauthData && oauthConnected && (
+                        <View style={[styles.oauthStatsCard, { marginBottom: 16 }]}>
+                            <Text style={styles.oauthStatsTitle}>
+                                {oauthData.profile?.display_name || '用户'} 的音乐偏好
+                            </Text>
+                            {/* Top 流派 */}
+                            {oauthData.topGenres && oauthData.topGenres.length > 0 && (
+                                <View style={styles.oauthSection}>
+                                    <Text style={styles.oauthSectionLabel}>热门流派</Text>
+                                    <View style={styles.genreChips}>
+                                        {oauthData.topGenres.slice(0, 5).map((genre, i) => (
+                                            <View key={i} style={styles.genreChip}>
+                                                <Text style={styles.genreChipText}>{genre}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            )}
+                            {/* Top 艺人 */}
+                            {oauthData.topArtists && oauthData.topArtists.length > 0 && (
+                                <View style={styles.oauthSection}>
+                                    <Text style={styles.oauthSectionLabel}>热门艺人</Text>
+                                    {oauthData.topArtists.slice(0, 5).map((artist, i) => (
+                                        <View key={i} style={styles.oauthArtistRow}>
+                                            <Text style={styles.oauthArtistRank}>#{i + 1}</Text>
+                                            <Text style={styles.oauthArtistName}>{artist.name}</Text>
+                                            <Text style={styles.oauthArtistPop}>🔥 {artist.popularity}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* 然后显示导入的详细统计 */}
                     <SpotifyStats stats={importedStats} showFullDetails />
                 </>
             ) : oauthData && oauthConnected ? (
@@ -465,10 +522,16 @@ export default function MusicVibeDetail() {
                 ))}
             </View>
 
-            {/* Tab 内容 */}
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                {renderTabContent()}
-            </ScrollView>
+            {/* Tab 内容 - consensus tab 不使用 ScrollView 因为 FlatList 自带滚动 */}
+            {activeTab === "consensus" ? (
+                <View style={styles.scrollView}>
+                    {renderTabContent()}
+                </View>
+            ) : (
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                    {renderTabContent()}
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 }

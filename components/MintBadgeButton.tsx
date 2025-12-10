@@ -132,7 +132,7 @@ export default function MintBadgeButton({
                     </View>
                     <View className="bg-black/20 px-2 py-1 rounded-lg">
                         <Text className="text-gray-200 text-sm">
-                            💎 {cvibCost} CVIB
+                            💎 {cvibCost} CVB
                         </Text>
                     </View>
                 </View>
@@ -152,7 +152,7 @@ export default function MintBadgeButton({
                         </Text>
                     </View>
                     <Text className="text-white/70 text-center text-sm mt-1">
-                        需要销毁 {cvibCost} $CVIB
+                        需要销毁 {cvibCost} $CVB
                     </Text>
                 </Pressable>
             </View>
@@ -198,19 +198,19 @@ export default function MintBadgeButton({
     if (status === "insufficient-cvib") {
         return (
             <View className="bg-purple-900/30 rounded-xl p-4 border border-purple-700/50">
-                <Text className="text-purple-400 font-semibold mb-2">💎 $CVIB 不足</Text>
+                <Text className="text-purple-400 font-semibold mb-2">💎 $CVB 不足</Text>
                 <Text className="text-gray-300 text-sm mb-3">
-                    铸造 {tierInfo.emoji} {tierInfo.name} 级徽章需要 {cvibCost} CVIB。
+                    铸造 {tierInfo.emoji} {tierInfo.name} 级徽章需要 {cvibCost} CVB。
                     {cvibBalance && (
-                        <Text>当前余额: {parseFloat(cvibBalance).toFixed(0)} CVIB</Text>
+                        <Text>当前余额: {parseFloat(cvibBalance).toFixed(0)} CVB</Text>
                     )}
                 </Text>
                 <View className="bg-purple-800/30 rounded-lg p-3 mb-3">
                     <Text className="text-purple-300 text-sm">
-                        💡 如何获取 $CVIB？
+                        💡 如何获取 $CVB？
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                        通过验证 Spotify 数据并导入收听记录，根据你的听歌时长获得 $CVIB 奖励。
+                        通过验证 Spotify 数据并导入收听记录，根据你的听歌时长获得 $CVB 奖励。
                     </Text>
                 </View>
                 <Pressable onPress={reset} className="mt-2">
@@ -227,7 +227,7 @@ export default function MintBadgeButton({
                 <View className="items-center">
                     <ActivityIndicator size="large" color="#9333ea" />
                     <Text className="text-purple-400 mt-4 font-semibold">
-                        正在授权 $CVIB...
+                        正在授权 $CVB...
                     </Text>
                     <Text className="text-gray-400 text-sm mt-2">
                         请在钱包中确认授权交易

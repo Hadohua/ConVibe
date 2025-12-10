@@ -679,7 +679,7 @@ export function useMintSBT(): UseMintSBTReturn {
                 // 如果授权不足，先授权
                 if (allowance < totalCost) {
                     setStatus("approving");
-                    console.log("授权 $CVIB...");
+                    console.log("授权 $CVB...");
 
                     const approveData = encodeFunctionData({
                         abi: VibeTokenAbi,
@@ -687,12 +687,32 @@ export function useMintSBT(): UseMintSBTReturn {
                         args: [MUSIC_CONSENSUS_SBT_ADDRESS, totalCost],
                     });
 
+                    // 估算授权 gas
+                    let approveGasLimit: bigint;
+                    try {
+                        const gasEstimate = await publicClient.estimateGas({
+                            account: userAddress,
+                            to: VIBE_TOKEN_ADDRESS,
+                            data: approveData,
+                        });
+                        approveGasLimit = (gasEstimate * 150n) / 100n;
+                    } catch {
+                        approveGasLimit = 60000n; // approve 操作的安全默认值
+                    }
+
+                    const feeData = await publicClient.estimateFeesPerGas();
+                    const maxFeePerGas = feeData.maxFeePerGas || 2000000n;
+                    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || 1000000n;
+
                     const approveHash = await provider.request({
                         method: "eth_sendTransaction",
                         params: [{
                             from: userAddress,
                             to: VIBE_TOKEN_ADDRESS,
                             data: approveData,
+                            gasLimit: `0x${approveGasLimit.toString(16)}`,
+                            maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+                            maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`,
                         }],
                     }) as `0x${string}`;
 
@@ -840,17 +860,18 @@ export function useMintSBT(): UseMintSBTReturn {
             // 所有流派使用相同 tier
             const tiers = genreIds.map(() => tier);
 
-            // V3: 如果有 Proof，使用链上验证
+            // V4: 默认使用 $CVB 铸造
+            // 如果有 Proof 则使用链上验证 (mintWithProof)
             if (proof) {
                 console.log("使用 Reclaim Proof 链上验证铸造");
                 return mintWithProof(genreIds, tiers, proof);
             }
 
-            // 否则使用旧版铸造 (向后兼容)
-            console.log("使用旧版铸造 (无 Proof)");
-            return mintTiered(genreIds, tiers);
+            // V4 默认：使用 $CVB 铸造
+            console.log("使用 $CVB 铸造 (V4)");
+            return mintWithCVIB(genreIds, tiers);
         },
-        [mintTiered, mintWithProof]
+        [mintWithCVIB, mintWithProof]
     );
 
     /**

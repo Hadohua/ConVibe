@@ -6,18 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title VibeToken ($CVIB)
- * @notice ConVibe 共识积分代币，用于铸造 SBT 徽章
+ * @title Convibe Token ($CVB)
+ * @notice Convibe 共识积分代币，用于铸造 SBT 徽章
  * @dev ERC-20 可销毁代币，支持授权铸造者
  * 
  * 代币经济：
- * - 用户通过验证 Spotify 数据获得 $CVIB
- * - 铸造 SBT 徽章需要销毁相应数量的 $CVIB
- * - Entry Tier: 100 CVIB
- * - Veteran Tier: 500 CVIB  
- * - OG Tier: 1000 CVIB
+ * - 用户通过验证 Spotify 数据获得 $CVB
+ * - 铸造 SBT 徽章需要销毁相应数量的 $CVB
+ * - Entry Tier: 100 CVB
+ * - Veteran Tier: 500 CVB  
+ * - OG Tier: 1000 CVB
  */
-contract VibeToken is ERC20, ERC20Burnable, Ownable {
+contract ConvibeToken is ERC20, ERC20Burnable, Ownable {
     
     // ============================================
     // 状态变量
@@ -27,7 +27,7 @@ contract VibeToken is ERC20, ERC20Burnable, Ownable {
     mapping(address => bool) public authorizedMinters;
     
     /// @notice 每小时听歌奖励的代币数量 (18 decimals)
-    uint256 public rewardPerHour = 10 * 1e18; // 10 CVIB per hour
+    uint256 public rewardPerHour = 10 * 1e18; // 10 CVB per hour
     
     // ============================================
     // 事件
@@ -45,7 +45,7 @@ contract VibeToken is ERC20, ERC20Burnable, Ownable {
      * @param initialOwner 合约所有者地址
      */
     constructor(address initialOwner) 
-        ERC20("Vibe Token", "CVIB") 
+        ERC20("Convibe", "CVB") 
         Ownable(initialOwner) 
     {}
     
@@ -61,7 +61,7 @@ contract VibeToken is ERC20, ERC20Burnable, Ownable {
     function mint(address to, uint256 amount) external {
         require(
             authorizedMinters[msg.sender] || msg.sender == owner(), 
-            "VibeToken: Not authorized to mint"
+            "ConvibeToken: Not authorized to mint"
         );
         _mint(to, amount);
         emit TokensMinted(to, amount, "authorized_mint");
@@ -75,7 +75,7 @@ contract VibeToken is ERC20, ERC20Burnable, Ownable {
     function mintForListening(address to, uint256 hoursListened) external {
         require(
             authorizedMinters[msg.sender] || msg.sender == owner(), 
-            "VibeToken: Not authorized to mint"
+            "ConvibeToken: Not authorized to mint"
         );
         uint256 amount = hoursListened * rewardPerHour;
         _mint(to, amount);

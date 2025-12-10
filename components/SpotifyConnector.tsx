@@ -98,27 +98,42 @@ export default function SpotifyConnector({
 
     /**
      * 用授权码换取 Access Token
+     * 使用直接 fetch 替代 AuthSession.exchangeCodeAsync 以避免 Expo Go 网络问题
      */
     const exchangeCodeForToken = async (code: string) => {
         try {
             setStatus("connecting");
 
-            const tokenResponse = await AuthSession.exchangeCodeAsync(
-                {
-                    clientId: getSpotifyClientId(),
-                    code,
-                    redirectUri,
-                    extraParams: {
-                        code_verifier: request?.codeVerifier || "",
-                    },
+            const clientId = getSpotifyClientId();
+            const codeVerifier = request?.codeVerifier || "";
+
+            // 直接使用 fetch 调用 Spotify Token Endpoint
+            const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
                 },
-                spotifyDiscovery
-            );
+                body: new URLSearchParams({
+                    grant_type: "authorization_code",
+                    code,
+                    redirect_uri: redirectUri,
+                    client_id: clientId,
+                    code_verifier: codeVerifier,
+                }).toString(),
+            });
+
+            if (!tokenResponse.ok) {
+                const errorData = await tokenResponse.text();
+                console.error("Token exchange error:", errorData);
+                throw new Error(`Token 交换失败: ${tokenResponse.status}`);
+            }
+
+            const data = await tokenResponse.json();
 
             const newTokens = createTokens(
-                tokenResponse.accessToken,
-                tokenResponse.expiresIn || 3600,
-                tokenResponse.refreshToken
+                data.access_token,
+                data.expires_in || 3600,
+                data.refresh_token
             );
 
             setTokens(newTokens);

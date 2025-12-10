@@ -32,6 +32,12 @@ interface CVIBBalanceCardProps {
     refreshKey?: number;
     /** 预估可获得的 $CVIB (验证后显示) */
     estimatedCVIB?: number;
+    /** 显示领取按钮 */
+    showClaimButton?: boolean;
+    /** 领取中状态 */
+    claiming?: boolean;
+    /** 领取按钮点击回调 */
+    onClaimPress?: () => void;
 }
 
 // ============================================
@@ -42,6 +48,9 @@ export default function CVIBBalanceCard({
     compact = false,
     refreshKey = 0,
     estimatedCVIB,
+    showClaimButton = false,
+    claiming = false,
+    onClaimPress,
 }: CVIBBalanceCardProps) {
     const { user } = usePrivy();
     const wallet = useEmbeddedWallet();
@@ -93,7 +102,7 @@ export default function CVIBBalanceCard({
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.tokenIcon}>💎</Text>
-                    <Text style={styles.title}>$CVIB 余额</Text>
+                    <Text style={styles.title}>$CVB 余额</Text>
                 </View>
                 <Text style={styles.connectHint}>连接钱包后查看余额</Text>
             </View>
@@ -106,7 +115,7 @@ export default function CVIBBalanceCard({
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.tokenIcon}>💎</Text>
-                    <Text style={styles.title}>$CVIB 余额</Text>
+                    <Text style={styles.title}>$CVB 余额</Text>
                 </View>
                 <ActivityIndicator size="small" color="#a855f7" />
             </View>
@@ -119,7 +128,7 @@ export default function CVIBBalanceCard({
             <Pressable onPress={fetchBalance} style={styles.compactContainer}>
                 <Text style={styles.tokenIcon}>💎</Text>
                 <Text style={styles.compactBalance}>{balanceNum.toFixed(0)}</Text>
-                <Text style={styles.compactLabel}>CVIB</Text>
+                <Text style={styles.compactLabel}>CVB</Text>
             </Pressable>
         );
     }
@@ -131,7 +140,7 @@ export default function CVIBBalanceCard({
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <Text style={styles.tokenIcon}>💎</Text>
-                    <Text style={styles.title}>$CVIB 余额</Text>
+                    <Text style={styles.title}>$CVB 余额</Text>
                 </View>
                 <Pressable onPress={fetchBalance} style={styles.refreshBtn}>
                     <Text style={styles.refreshText}>刷新</Text>
@@ -141,7 +150,7 @@ export default function CVIBBalanceCard({
             {/* 余额显示 */}
             <View style={styles.balanceRow}>
                 <Text style={styles.balanceValue}>{balanceNum.toFixed(2)}</Text>
-                <Text style={styles.balanceUnit}>CVIB</Text>
+                <Text style={styles.balanceUnit}>CVB</Text>
             </View>
 
             {/* 可铸造等级 */}
@@ -157,7 +166,7 @@ export default function CVIBBalanceCard({
             ) : (
                 <View style={styles.insufficientBadge}>
                     <Text style={styles.insufficientText}>
-                        💡 需要至少 {CVIB_TIER_COST[TIER.ENTRY]} CVIB 才能铸造徽章
+                        💡 需要至少 {CVIB_TIER_COST[TIER.ENTRY]} CVB 才能铸造徽章
                     </Text>
                 </View>
             )}
@@ -166,8 +175,25 @@ export default function CVIBBalanceCard({
             {estimatedCVIB !== undefined && estimatedCVIB > 0 && (
                 <View style={styles.estimatedRow}>
                     <Text style={styles.estimatedLabel}>✨ 验证后可获得</Text>
-                    <Text style={styles.estimatedValue}>+{estimatedCVIB} CVIB</Text>
+                    <Text style={styles.estimatedValue}>+{estimatedCVIB} CVB</Text>
                 </View>
+            )}
+
+            {/* 领取按钮 */}
+            {showClaimButton && estimatedCVIB !== undefined && estimatedCVIB > 0 && (
+                <Pressable
+                    style={[styles.claimButton, claiming && styles.claimButtonDisabled]}
+                    onPress={onClaimPress}
+                    disabled={claiming}
+                >
+                    {claiming ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <Text style={styles.claimButtonText}>
+                            💎 领取 {estimatedCVIB} CVB
+                        </Text>
+                    )}
+                </Pressable>
             )}
 
             {/* Tier 成本表 */}
@@ -355,5 +381,21 @@ const styles = StyleSheet.create({
         color: "#a1a1aa",
         fontSize: 12,
         marginLeft: 4,
+    },
+    // 领取按钮样式
+    claimButton: {
+        backgroundColor: "#22c55e",
+        paddingVertical: 12,
+        borderRadius: 10,
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    claimButtonDisabled: {
+        opacity: 0.6,
+    },
+    claimButtonText: {
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: "600",
     },
 });
