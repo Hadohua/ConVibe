@@ -31,35 +31,36 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
 |------|------|
 | 🔐 **无感登录** | Google 社交登录，自动创建嵌入式钱包 |
 | 🎵 **三重验证** | OAuth / 数据导入 / Reclaim zkTLS 零知识证明 |
-| 💎 **$CVIB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
+| 💎 **$CVB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
 | 🏆 **分层 SBT 徽章** | 入门 / 资深 / OG 三级徽章体系 |
 | 📊 **听歌统计** | 导入 Spotify 数据包，查看详细统计 |
+| 📋 **钱包管理** | 一键复制钱包地址，查看余额 |
 | 🔥 **共识社区** | 基于徽章的门控内容和投票系统 |
 
 ---
 
-## 💎 $CVIB 经济模型
+## 💎 $CVB 经济模型
 
-ConVibe 引入 **$CVIB (Vibe Token)** 作为平台的核心代币：
+ConVibe 引入 **$CVB (Convibe Token)** 作为平台的核心代币：
 
-### 获取 $CVIB
+### 获取 $CVB
 
 - 📊 验证并导入 Spotify 数据
-- ⏱️ 每小时听歌时长 = 10 CVIB
+- ⏱️ 每小时听歌时长 = 10 CVB
 - 🎯 深度艺人奖励 (前10艺人额外加成)
 
 ### 铸造徽章成本
 
-| 等级 | 名称 | 所需 $CVIB |
+| 等级 | 名称 | 所需 $CVB |
 |------|------|-----------|
-| 🌱 Tier 1 | 入门 | 100 CVIB |
-| ⭐ Tier 2 | 资深 | 500 CVIB |
-| 👑 Tier 3 | OG | 1000 CVIB |
+| 🌱 Tier 1 | 入门 | 100 CVB |
+| ⭐ Tier 2 | 资深 | 500 CVB |
+| 👑 Tier 3 | OG | 1000 CVB |
 
 ### 代币流转
 
 ```
-验证 Spotify → 计算听歌时长 → 获得 $CVIB → 销毁 $CVIB → 铸造 SBT 徽章
+验证 Spotify → 计算听歌时长 → 获得 $CVB → 销毁 $CVB → 铸造 SBT 徽章
 ```
 
 ---
@@ -88,7 +89,7 @@ ConVibe 引入 **$CVIB (Vibe Token)** 作为平台的核心代币：
 ┌───────────────▼─────────────────────────────────────────────┐
 │                        区块链 (Base Sepolia)                 │
 ├─────────────────────────────────────────────────────────────┤
-│  VibeToken ($CVIB)  │  MusicConsensusSBT  │   Viem          │
+│  VibeToken ($CVB)   │  MusicConsensusSBT V4  │   Viem          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -143,17 +144,18 @@ EXPO_PUBLIC_RECLAIM_PROVIDER_ID=your_reclaim_provider_id
 
 | 合约 | 地址 | 功能 |
 |------|------|------|
-| **VibeToken ($CVIB)** | `0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074` | ERC-20 代币 |
-| **MusicConsensusSBT V3** | `0x1184da97ef82dac78196b23182c82fe6acca82e3` | SBT 徽章 |
+| **VibeToken ($CVB)** | `0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074` | ERC-20 代币 |
+| **MusicConsensusSBT V4** | `0x25e3af27cc14d260f0e7199a1a06802d81e0b75f` | SBT 徽章 + $CVB 铸造 |
 
 ### 合约功能
 
 **VibeToken.sol**
-- `mint(address, amount)` - 铸造 $CVIB (授权地址)
-- `burn(amount)` - 销毁 $CVIB
+- `mint(address, amount)` - 铸造 $CVB (授权地址)
+- `burn(amount)` - 销毁 $CVB
 - `balanceOf(address)` - 查询余额
 
-**MusicConsensusSBT.sol**
+**MusicConsensusSBTV4.sol**
+- `mintWithCVIB(genreId, tier)` - 销毁 $CVB 铸造徽章
 - `mintWithProof(proof, genreId, tier)` - 链上验证铸造
 - `getUserBadges(address)` - 获取用户徽章
 - `getBadgeInfo(address, genreId)` - 获取徽章详情
@@ -171,9 +173,10 @@ ConVibe/
 │   ├── music-vibe-detail.tsx  # 音乐 Vibe 详情页
 │   └── _layout.tsx         # 根布局
 ├── components/             # React 组件
-│   ├── CVIBBalanceCard.tsx # $CVIB 余额显示
+│   ├── CVIBBalanceCard.tsx # $CVB 余额显示
 │   ├── MintBadgeButton.tsx # 铸造徽章按钮
 │   ├── SpotifyStats.tsx    # 统计展示
+│   ├── SpotifyConnector.tsx # OAuth 连接
 │   └── UserBadges.tsx      # 用户徽章展示
 ├── contracts/              # Solidity 智能合约
 │   ├── VibeToken.sol       # $CVIB 代币
@@ -183,10 +186,12 @@ ConVibe/
 ├── lib/                    # 工具库
 │   ├── web3/               # 区块链相关
 │   ├── spotify/            # Spotify 数据解析
-│   └── consensus/          # $CVIB 计算逻辑
+│   ├── api/                # API 模块 ($CVB 领取等)
+│   └── consensus/          # $CVB 计算逻辑
 └── scripts/                # 部署脚本
-    ├── mint-cvib.js        # 手动发放 $CVIB
-    └── deploy-sbt-v4.js    # 部署 V4 合约
+    ├── mint-cvib.js        # 手动发放 $CVB
+    ├── deploy-sbt-v4.js    # 部署 V4 合约
+    └── deploy-convibe-token.js  # 部署代币合约
 ```
 
 ---
