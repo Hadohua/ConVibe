@@ -1,30 +1,26 @@
 /**
- * app/(tabs)/profile.tsx - 个人资料页
+ * app/(tabs)/profile.tsx - 个人资料页 (简化版)
  * 
- * 展示用户 SBT 收藏、钱包地址和登出功能。
+ * 简化为基础用户设置页：
+ * - 钱包信息
+ * - 关联账户
+ * - 登出功能
+ * 
+ * Web3 音乐资产管理已迁移至 Music Vibe > Mine
  */
 
 import { View, Text, Pressable, Alert, ScrollView } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
-import UserBadges from "../../components/UserBadges";
 import { SkeletonText, SkeletonCard } from "../../components/ui/Skeleton";
 
 /**
- * ProfileScreen - 个人资料页组件
- * 
- * 功能：
- * 1. 展示用户的 SBT 徽章收藏
- * 2. 显示钱包地址
- * 3. 显示关联账户
- * 4. 提供登出功能
+ * ProfileScreen - 个人资料页组件 (简化版)
  */
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, logout, isReady } = usePrivy();
-
-    // 获取嵌入式钱包
     const wallet = useEmbeddedWallet();
 
     /**
@@ -63,7 +59,7 @@ export default function ProfileScreen() {
         }
     };
 
-    // 获取所有关联账户 - 使用更灵活的类型
+    // 获取所有关联账户
     const linkedAccounts = (user?.linked_accounts || []) as unknown as Array<{
         type: string;
         email?: string;
@@ -74,10 +70,9 @@ export default function ProfileScreen() {
         return (
             <ScrollView className="flex-1 bg-vibe-black">
                 <View className="px-6 pt-16 pb-32">
-                    <Text className="text-white text-3xl font-bold mb-8">我的资料</Text>
+                    <Text className="text-white text-3xl font-bold mb-8">设置</Text>
                     <SkeletonCard style={{ marginBottom: 24 }} />
                     <SkeletonCard style={{ marginBottom: 24 }} />
-                    <SkeletonCard />
                 </View>
             </ScrollView>
         );
@@ -88,14 +83,27 @@ export default function ProfileScreen() {
             <View className="px-6 pt-16 pb-32">
                 {/* 页面标题 */}
                 <View className="flex-row items-center mb-8">
-                    <Text className="text-vibe-gold text-4xl mr-3">👑</Text>
-                    <Text className="text-white text-3xl font-bold">我的资料</Text>
+                    <Text className="text-white text-4xl mr-3">⚙️</Text>
+                    <Text className="text-white text-3xl font-bold">设置</Text>
                 </View>
 
-                {/* SBT 徽章收藏 */}
-                <View className="mb-6">
-                    <UserBadges />
-                </View>
+                {/* 快速入口 - Music Vibe */}
+                <Pressable
+                    onPress={() => router.push("/(music-vibe)/mine")}
+                    className="bg-vibe-purple/20 rounded-2xl p-5 mb-6 border border-vibe-purple/40"
+                    style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                >
+                    <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center">
+                            <Text className="text-3xl mr-3">🎵</Text>
+                            <View>
+                                <Text className="text-white text-lg font-semibold">Music Vibe</Text>
+                                <Text className="text-gray-400 text-sm">管理你的 Web3 音乐资产</Text>
+                            </View>
+                        </View>
+                        <Text className="text-vibe-purple text-2xl">→</Text>
+                    </View>
+                </Pressable>
 
                 {/* 钱包信息 */}
                 <View className="bg-dark-200 rounded-2xl p-6 mb-6 border border-dark-300">

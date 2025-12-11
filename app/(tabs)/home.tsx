@@ -38,7 +38,7 @@ const VIBE_BLOCKS: VibeBlock[] = [
         color: "#8b5cf6",
         gradientColors: ["#8b5cf6", "#6366f1"],
         isActive: true,
-        route: "/music-vibe-detail",
+        route: "/(music-vibe)/rankings",
     },
     {
         id: "gaming",
