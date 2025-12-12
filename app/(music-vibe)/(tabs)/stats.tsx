@@ -1,5 +1,5 @@
 /**
- * app/(music-vibe)/stats.tsx - 统计页面
+ * app/(music-vibe)/(tabs)/stats.tsx - 统计页面
  * 
  * 从 music-vibe-detail.tsx 迁移的统计功能：
  * - 听歌时长可视化
@@ -11,12 +11,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { useEmbeddedWallet } from "@privy-io/expo";
-import SpotifyStats from "../../components/SpotifyStats";
-import SpotifyDataImport from "../../components/SpotifyDataImport";
-import DateRangePicker from "../../components/stats/DateRangePicker";
-import LeaderboardList from "../../components/stats/LeaderboardList";
-import SyncStatusCard from "../../components/stats/SyncStatusCard";
-import { type StreamingStats, getStatsFromDatabase } from "../../lib/spotify/streaming-history-parser";
+import SpotifyStats from "../../../components/SpotifyStats";
+import SpotifyDataImport from "../../../components/SpotifyDataImport";
+import DateRangePicker from "../../../components/stats/DateRangePicker";
+import LeaderboardList from "../../../components/stats/LeaderboardList";
+import SyncStatusCard from "../../../components/stats/SyncStatusCard";
+import { type StreamingStats, getStatsFromDatabase } from "../../../lib/spotify/streaming-history-parser";
 
 // ============================================
 // Stats 主组件

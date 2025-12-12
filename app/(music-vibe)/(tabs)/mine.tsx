@@ -1,5 +1,5 @@
 /**
- * app/(music-vibe)/mine.tsx - Web3 Hub 页面
+ * app/(music-vibe)/(tabs)/mine.tsx - Web3 Hub 页面
  * 
  * 音乐资产管理中心（从 profile.tsx 和 music-vibe-detail.tsx 迁移）：
  * - UserBadges: SBT 徽章展示
@@ -13,18 +13,18 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from "react-nati
 import { useEmbeddedWallet } from "@privy-io/expo";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
-import UserBadges from "../../components/UserBadges";
-import CVIBBalanceCard from "../../components/CVIBBalanceCard";
-import MintBadgeButton from "../../components/MintBadgeButton";
-import SpotifyConnector from "../../components/SpotifyConnector";
-import SpotifyDataImport from "../../components/SpotifyDataImport";
-import SpotifyVerifier, { type VerificationResult } from "../../components/SpotifyVerifier";
-import { calculateCVIBFromStats } from "../../lib/consensus/tier-calculator";
-import type { StreamingStats } from "../../lib/spotify/streaming-history-parser";
-import type { SpotifyTokens } from "../../lib/spotify/spotify-auth";
-import { calculateTierFromPlaytime } from "../../lib/spotify/streaming-history-parser";
-import { TIER, type TierLevel } from "../../lib/consensus/tier-calculator";
-import { saveSpotifyTokens } from "../../lib/spotify/streaming-sync";
+import UserBadges from "../../../components/UserBadges";
+import CVIBBalanceCard from "../../../components/CVIBBalanceCard";
+import MintBadgeButton from "../../../components/MintBadgeButton";
+import SpotifyConnector from "../../../components/SpotifyConnector";
+import SpotifyDataImport from "../../../components/SpotifyDataImport";
+import SpotifyVerifier, { type VerificationResult } from "../../../components/SpotifyVerifier";
+import { calculateCVIBFromStats } from "../../../lib/consensus/tier-calculator";
+import type { StreamingStats } from "../../../lib/spotify/streaming-history-parser";
+import type { SpotifyTokens } from "../../../lib/spotify/spotify-auth";
+import { calculateTierFromPlaytime } from "../../../lib/spotify/streaming-history-parser";
+import { TIER, type TierLevel } from "../../../lib/consensus/tier-calculator";
+import { saveSpotifyTokens } from "../../../lib/spotify/streaming-sync";
 
 // ============================================
 // 类型定义

@@ -2,9 +2,12 @@
  * components/stats/StatCard.tsx - 统计卡片组件
  * 
  * 显示大数字 + 变化百分比，类似 Stats.fm 风格
+ * 支持两种模式：
+ * 1. Stats.fm 风格（带变化百分比）
+ * 2. 详情页风格（带 emoji）
  */
 
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 // ============================================
 // 类型定义
@@ -21,6 +24,10 @@ interface StatCardProps {
     color?: "green" | "purple" | "yellow" | "blue";
     /** 是否紧凑模式 */
     compact?: boolean;
+    /** Emoji 图标 (详情页风格) */
+    emoji?: string;
+    /** 使用 StyleSheet 风格 (详情页) */
+    useDetailStyle?: boolean;
 }
 
 // ============================================
@@ -56,6 +63,8 @@ export default function StatCard({
     changePercent,
     color = "green",
     compact = false,
+    emoji,
+    useDetailStyle = false,
 }: StatCardProps) {
     const colorScheme = COLORS[color];
     const isPositive = changePercent !== undefined && changePercent >= 0;
@@ -66,6 +75,18 @@ export default function StatCard({
         ? value.toLocaleString()
         : value;
 
+    // 详情页风格 (带 emoji)
+    if (useDetailStyle || emoji) {
+        return (
+            <View style={detailStyles.statCard}>
+                {emoji && <Text style={detailStyles.statEmoji}>{emoji}</Text>}
+                <Text style={detailStyles.statValue}>{formattedValue}</Text>
+                <Text style={detailStyles.statLabel}>{label}</Text>
+            </View>
+        );
+    }
+
+    // Stats.fm 风格 (带变化百分比)
     return (
         <View
             className={`rounded-xl ${compact ? "p-3" : "p-4"}`}
@@ -98,3 +119,33 @@ export default function StatCard({
         </View>
     );
 }
+
+// ============================================
+// 详情页风格样式
+// ============================================
+
+const detailStyles = StyleSheet.create({
+    statCard: {
+        flex: 1,
+        backgroundColor: "#18181b",
+        borderRadius: 16,
+        padding: 16,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#27272a",
+    },
+    statEmoji: {
+        fontSize: 24,
+        marginBottom: 8,
+    },
+    statValue: {
+        color: "#1db954",
+        fontSize: 22,
+        fontWeight: "700",
+        marginBottom: 4,
+    },
+    statLabel: {
+        color: "#71717a",
+        fontSize: 12,
+    },
+});

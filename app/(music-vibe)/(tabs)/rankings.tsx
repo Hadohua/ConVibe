@@ -1,5 +1,5 @@
 /**
- * app/(music-vibe)/rankings.tsx - 排行榜页面
+ * app/(music-vibe)/(tabs)/rankings.tsx - 排行榜页面
  * 
  * Stats.fm 风格的排行榜：
  * - 顶部 Tabs: Tracks, Artists, Albums
@@ -265,50 +265,61 @@ export default function RankingsScreen() {
         );
     }, [isLoadingMore]);
 
-    return (
-        <View style={styles.container}>
-            {/* 顶部 Tabs */}
-            <View style={styles.topTabsContainer}>
-                <TopTab
-                    type="tracks"
-                    isActive={activeType === "tracks"}
-                    onPress={() => handleTypeChange("tracks")}
-                    label="Tracks"
-                    emoji="🎵"
-                />
-                <TopTab
-                    type="artists"
-                    isActive={activeType === "artists"}
-                    onPress={() => handleTypeChange("artists")}
-                    label="Artists"
-                    emoji="🎤"
-                />
-                <TopTab
-                    type="albums"
-                    isActive={activeType === "albums"}
-                    onPress={() => handleTypeChange("albums")}
-                    label="Albums"
-                    emoji="💿"
-                />
-            </View>
+    // 渲染顶部 Tabs (作为 ListHeaderComponent)
+    const renderListHeader = useCallback(() => (
+        <View style={styles.topTabsContainer}>
+            <TopTab
+                type="tracks"
+                isActive={activeType === "tracks"}
+                onPress={() => handleTypeChange("tracks")}
+                label="Tracks"
+                emoji="🎵"
+            />
+            <TopTab
+                type="artists"
+                isActive={activeType === "artists"}
+                onPress={() => handleTypeChange("artists")}
+                label="Artists"
+                emoji="🎤"
+            />
+            <TopTab
+                type="albums"
+                isActive={activeType === "albums"}
+                onPress={() => handleTypeChange("albums")}
+                label="Albums"
+                emoji="💿"
+            />
+        </View>
+    ), [activeType, handleTypeChange]);
 
-            {/* 列表 */}
-            {isLoading ? (
+    // 渲染空状态加载
+    const renderEmptyComponent = useCallback(() => {
+        if (isLoading) {
+            return (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator color="#8b5cf6" size="large" />
                 </View>
-            ) : (
-                <FlatList
-                    data={data}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContent}
-                    onEndReached={handleLoadMore}
-                    onEndReachedThreshold={0.5}
-                    ListFooterComponent={renderFooter}
-                    showsVerticalScrollIndicator={false}
-                />
-            )}
+            );
+        }
+        return null;
+    }, [isLoading]);
+
+    return (
+        <View style={styles.container}>
+            {/* FlatList 作为最外层容器，顶部 Tabs 在 ListHeaderComponent 中 */}
+            <FlatList
+                data={isLoading ? [] : data}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContent}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListHeaderComponent={renderListHeader}
+                ListFooterComponent={renderFooter}
+                ListEmptyComponent={renderEmptyComponent}
+                showsVerticalScrollIndicator={false}
+                stickyHeaderIndices={[0]} // 让 Tabs 固定在顶部
+            />
         </View>
     );
 }
@@ -328,6 +339,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: "#27272a",
+        backgroundColor: "#09090b", // 背景色用于 sticky header
     },
     topTab: {
         flex: 1,
@@ -365,7 +377,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#1db954",
     },
     loadingContainer: {
-        flex: 1,
+        height: 400, // 固定高度确保加载状态正确显示
         justifyContent: "center",
         alignItems: "center",
     },

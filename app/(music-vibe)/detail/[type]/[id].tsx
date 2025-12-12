@@ -12,6 +12,8 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions } from "react
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DetailStatsChart, DetailStatsData, DetailType } from "../../../../components/stats/DetailStatsChart";
+import StatCard from "../../../../components/stats/StatCard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -32,56 +34,153 @@ interface DetailData {
     lastListened?: string;
 }
 
-// Mock data generator
-const getMockDetailData = (type: ItemType, id: string): DetailData => {
-    const baseData: Record<ItemType, DetailData> = {
-        tracks: {
-            name: "Blinding Lights",
-            subtitle: "The Weeknd",
-            playCount: 247,
-            totalMinutes: 892,
-            genres: ["Synth-pop", "R&B", "Dance"],
-            firstListened: "2020-03-15",
-            lastListened: "2024-12-10",
-        },
-        artists: {
-            name: "The Weeknd",
-            subtitle: "R&B / Pop",
-            playCount: 1832,
-            totalMinutes: 6540,
-            genres: ["R&B", "Pop", "Synth-pop", "Alternative R&B"],
-            topTracks: ["Blinding Lights", "Save Your Tears", "Starboy", "The Hills", "Can't Feel My Face"],
-            firstListened: "2018-06-22",
-            lastListened: "2024-12-11",
-        },
-        albums: {
-            name: "After Hours",
-            subtitle: "The Weeknd • 2020",
-            playCount: 524,
-            totalMinutes: 2890,
-            genres: ["Synth-pop", "R&B", "New Wave"],
-            topTracks: ["Blinding Lights", "Save Your Tears", "In Your Eyes", "After Hours"],
-            firstListened: "2020-03-20",
-            lastListened: "2024-11-28",
-        },
-    };
+// Mock data - 与 rankings.tsx 保持同步
+const MOCK_DATA = {
+    tracks: {
+        names: [
+            "Blinding Lights", "Anti-Hero", "As It Was", "Stay", "Heat Waves",
+            "Bad Habit", "About Damn Time", "Running Up That Hill", "Shivers",
+            "Easy On Me", "Cold Heart", "Ghost", "Industry Baby", "good 4 u",
+            "Levitating", "Save Your Tears", "Montero", "Kiss Me More", "Peaches"
+        ],
+        subtitles: [
+            "The Weeknd", "Taylor Swift", "Harry Styles", "The Kid LAROI", "Glass Animals",
+            "Steve Lacy", "Lizzo", "Kate Bush", "Ed Sheeran", "Adele",
+            "Elton John", "Justin Bieber", "Lil Nas X", "Olivia Rodrigo", "Dua Lipa"
+        ],
+    },
+    artists: {
+        names: [
+            "Taylor Swift", "The Weeknd", "Drake", "Bad Bunny", "BTS",
+            "Ed Sheeran", "Harry Styles", "Doja Cat", "Billie Eilish", "Olivia Rodrigo",
+            "Post Malone", "Dua Lipa", "Justin Bieber", "Ariana Grande", "Kanye West"
+        ],
+        subtitles: [
+            "Pop", "R&B", "Hip-Hop", "Reggaeton", "K-Pop",
+            "Pop", "Pop", "Pop/Rap", "Alt Pop", "Pop",
+            "Hip-Hop", "Pop", "Pop", "Pop", "Hip-Hop"
+        ],
+    },
+    albums: {
+        names: [
+            "Midnights", "Renaissance", "Harry's House", "Un Verano Sin Ti", "30",
+            "=", "Dawn FM", "Happier Than Ever", "Planet Her", "SOUR",
+            "Future Nostalgia", "After Hours", "Fine Line", "Donda", "Positions"
+        ],
+        subtitles: [
+            "Taylor Swift", "Beyoncé", "Harry Styles", "Bad Bunny", "Adele",
+            "Ed Sheeran", "The Weeknd", "Billie Eilish", "Doja Cat", "Olivia Rodrigo"
+        ],
+    },
+};
 
-    return baseData[type] || baseData.tracks;
+// 流派映射
+const GENRE_MAP: Record<string, string[]> = {
+    "The Weeknd": ["R&B", "Pop", "Synth-pop"],
+    "Taylor Swift": ["Pop", "Country Pop", "Indie Folk"],
+    "Drake": ["Hip-Hop", "R&B", "Rap"],
+    "Bad Bunny": ["Reggaeton", "Latin Trap", "Urbano"],
+    "Harry Styles": ["Pop", "Rock", "Soft Rock"],
+    "Doja Cat": ["Pop", "Rap", "R&B"],
+    "Billie Eilish": ["Alt Pop", "Electropop", "Dark Pop"],
+    "Ed Sheeran": ["Pop", "Folk Pop", "Acoustic"],
+    "default": ["Pop", "Electronic", "Alternative"],
+};
+
+// Mock data generator - 根据 id 动态生成数据
+const getMockDetailData = (type: ItemType, id: string): DetailData => {
+    // ID 格式: "tracks-0", "artists-1", "albums-more-5"
+    const parts = id.split('-');
+    let index = 0;
+
+    // 处理 "tracks-more-5" 格式
+    if (parts.includes('more')) {
+        index = parseInt(parts[parts.length - 1]) || 0;
+    } else {
+        index = parseInt(parts[parts.length - 1]) || 0;
+    }
+
+    const data = MOCK_DATA[type] || MOCK_DATA.tracks;
+    const name = data.names[index % data.names.length] || `Unknown ${type}`;
+    const subtitle = data.subtitles[index % data.subtitles.length] || "Unknown Artist";
+
+    // 根据 index 生成一致的随机数据 (使用 index 作为种子)
+    const seed = index + 1;
+    const playCount = type === "artists"
+        ? 1000 + seed * 150
+        : type === "albums"
+            ? 300 + seed * 80
+            : 100 + seed * 25;
+
+    const totalMinutes = type === "artists"
+        ? 4000 + seed * 400
+        : type === "albums"
+            ? 1500 + seed * 200
+            : 300 + seed * 50;
+
+    // 获取流派
+    const artistName = type === "artists" ? name : subtitle;
+    const genres = GENRE_MAP[artistName] || GENRE_MAP["default"];
+
+    // 为艺人和专辑生成 top tracks
+    const topTracks = type !== "tracks" ? [
+        MOCK_DATA.tracks.names[(index * 3) % MOCK_DATA.tracks.names.length],
+        MOCK_DATA.tracks.names[(index * 3 + 1) % MOCK_DATA.tracks.names.length],
+        MOCK_DATA.tracks.names[(index * 3 + 2) % MOCK_DATA.tracks.names.length],
+        MOCK_DATA.tracks.names[(index * 3 + 3) % MOCK_DATA.tracks.names.length],
+    ] : undefined;
+
+    // 生成日期
+    const year = 2020 + (index % 4);
+    const month = ((index * 3) % 12) + 1;
+    const day = ((index * 7) % 28) + 1;
+
+    return {
+        name,
+        subtitle: type === "albums" ? `${subtitle} • ${year}` : subtitle,
+        playCount,
+        totalMinutes,
+        genres,
+        topTracks,
+        firstListened: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        lastListened: "2024-12-11",
+    };
+};
+
+// Mock chart data generator (实际应从 Supabase 获取)
+const getMockChartData = (type: ItemType, id: string): DetailStatsData => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+
+    // 解析 index 用于生成一致的数据
+    const parts = id.split('-');
+    const index = parseInt(parts[parts.length - 1]) || 0;
+    const seed = index + 1;
+
+    // 使用 seed 生成一致的数据而非随机
+    const baseCount = type === "artists" ? 80 : type === "albums" ? 40 : 20;
+    const basePlays = type === "artists" ? 1000 + seed * 150 : type === "albums" ? 300 + seed * 80 : 100 + seed * 25;
+    const baseMinutes = type === "artists" ? 4000 + seed * 400 : type === "albums" ? 1500 + seed * 200 : 300 + seed * 50;
+
+    return {
+        monthlyPlays: months.map((month, i) => ({
+            month,
+            count: baseCount + ((seed * (i + 1) * 7) % 30)
+        })),
+        hourlyDistribution: hours.map((hour, i) => ({
+            hour,
+            percentage: ((seed + i) * 3) % 25
+        })),
+        totalPlays: basePlays,
+        totalMinutes: baseMinutes,
+        avgPerSession: 2.5 + (seed % 3),
+        streak: type === "tracks" ? 5 + (seed % 20) : undefined,
+    };
 };
 
 // ============================================
-// Stat Card 组件
+// Detail 主组件
 // ============================================
-
-function StatCard({ label, value, emoji }: { label: string; value: string; emoji: string }) {
-    return (
-        <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>{emoji}</Text>
-            <Text style={styles.statValue}>{value}</Text>
-            <Text style={styles.statLabel}>{label}</Text>
-        </View>
-    );
-}
 
 // ============================================
 // Detail 主组件
@@ -94,15 +193,28 @@ export default function DetailScreen() {
 
     const itemType = (type as ItemType) || "tracks";
     const data = getMockDetailData(itemType, id || "");
+    const chartData = getMockChartData(itemType, id || "");
+
+    // 映射 type 到 DetailType (tracks -> track)
+    const detailType: DetailType = itemType === "tracks" ? "track" : itemType === "artists" ? "artist" : "album";
 
     const typeEmoji = itemType === "tracks" ? "🎵" : itemType === "artists" ? "🎤" : "💿";
     const typeLabel = itemType === "tracks" ? "Track" : itemType === "artists" ? "Artist" : "Album";
+
+    // 安全的返回处理函数
+    const handleGoBack = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/(music-vibe)/rankings");
+        }
+    };
 
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-                <Pressable onPress={() => router.back()} style={styles.backButton}>
+                <Pressable onPress={handleGoBack} style={styles.backButton}>
                     <Text style={styles.backButtonText}>← Back</Text>
                 </Pressable>
                 <Text style={styles.headerTitle}>{typeLabel} Details</Text>
@@ -178,6 +290,9 @@ export default function DetailScreen() {
                         </View>
                     </View>
                 </View>
+
+                {/* 复用的统计图表组件 */}
+                <DetailStatsChart type={detailType} data={chartData} />
 
                 {/* Bottom spacing */}
                 <View style={{ height: 40 }} />
@@ -256,29 +371,7 @@ const styles = StyleSheet.create({
         gap: 12,
         marginBottom: 20,
     },
-    statCard: {
-        flex: 1,
-        backgroundColor: "#18181b",
-        borderRadius: 16,
-        padding: 16,
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: "#27272a",
-    },
-    statEmoji: {
-        fontSize: 24,
-        marginBottom: 8,
-    },
-    statValue: {
-        color: "#1db954",
-        fontSize: 22,
-        fontWeight: "700",
-        marginBottom: 4,
-    },
-    statLabel: {
-        color: "#71717a",
-        fontSize: 12,
-    },
+    // StatCard 样式现在由共享组件 components/stats/StatCard.tsx 提供
     section: {
         marginBottom: 20,
     },
