@@ -3,18 +3,25 @@
  * 
  * Stats.fm 风格的排行榜：
  * - 顶部 Tabs: Tracks, Artists, Albums
- * - 无限滚动列表
+ * - 使用真实 Spotify 数据
  * - 点击进入详情页
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
     View, Text, FlatList, Pressable, StyleSheet,
     ActivityIndicator, Image, Dimensions
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import {
+    type StreamingStats,
+    type DateRange,
+    type TrackStats,
+    type ArtistStats,
+    parseStreamingHistory,
+} from "../../../lib/spotify/streaming-history-parser";
+import { loadRawStreamingRecords } from "../../../lib/spotify/streaming-history-storage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -31,6 +38,7 @@ interface RankingItem {
     subtitle: string;
     imageUrl?: string;
     playCount: number;
+    totalMinutes: number;
     duration?: string;
 }
 
@@ -43,59 +51,24 @@ interface TopTabProps {
 }
 
 // ============================================
-// 模拟数据 (实际应从 Supabase 获取)
+// 工具函数
 // ============================================
 
-const generateMockData = (type: RankingType, count: number): RankingItem[] => {
-    const baseData: Record<RankingType, { names: string[]; subtitles: string[] }> = {
-        tracks: {
-            names: [
-                "Blinding Lights", "Anti-Hero", "As It Was", "Stay", "Heat Waves",
-                "Bad Habit", "About Damn Time", "Running Up That Hill", "Shivers",
-                "Easy On Me", "Cold Heart", "Ghost", "Industry Baby", "good 4 u",
-                "Levitating", "Save Your Tears", "Montero", "Kiss Me More", "Peaches"
-            ],
-            subtitles: [
-                "The Weeknd", "Taylor Swift", "Harry Styles", "The Kid LAROI", "Glass Animals",
-                "Steve Lacy", "Lizzo", "Kate Bush", "Ed Sheeran", "Adele",
-                "Elton John", "Justin Bieber", "Lil Nas X", "Olivia Rodrigo", "Dua Lipa"
-            ],
-        },
-        artists: {
-            names: [
-                "Taylor Swift", "The Weeknd", "Drake", "Bad Bunny", "BTS",
-                "Ed Sheeran", "Harry Styles", "Doja Cat", "Billie Eilish", "Olivia Rodrigo",
-                "Post Malone", "Dua Lipa", "Justin Bieber", "Ariana Grande", "Kanye West"
-            ],
-            subtitles: [
-                "Pop", "R&B", "Hip-Hop", "Reggaeton", "K-Pop",
-                "Pop", "Pop", "Pop/Rap", "Alt Pop", "Pop",
-                "Hip-Hop", "Pop", "Pop", "Pop", "Hip-Hop"
-            ],
-        },
-        albums: {
-            names: [
-                "Midnights", "Renaissance", "Harry's House", "Un Verano Sin Ti", "30",
-                "=", "Dawn FM", "Happier Than Ever", "Planet Her", "SOUR",
-                "Future Nostalgia", "After Hours", "Fine Line", "Donda", "Positions"
-            ],
-            subtitles: [
-                "Taylor Swift", "Beyoncé", "Harry Styles", "Bad Bunny", "Adele",
-                "Ed Sheeran", "The Weeknd", "Billie Eilish", "Doja Cat", "Olivia Rodrigo"
-            ],
-        },
-    };
+/** 生成 ui-avatars 占位图 URL */
+function getAvatarUrl(name: string, size: number = 200): string {
+    const encodedName = encodeURIComponent(name);
+    return `https://ui-avatars.com/api/?name=${encodedName}&background=random&color=fff&size=${size}&bold=true`;
+}
 
-    const data = baseData[type];
-    return Array.from({ length: Math.min(count, data.names.length) }, (_, i) => ({
-        id: `${type}-${i}`,
-        rank: i + 1,
-        name: data.names[i % data.names.length],
-        subtitle: data.subtitles[i % data.subtitles.length],
-        playCount: Math.floor(Math.random() * 500) + 50,
-        duration: type === "tracks" ? `${Math.floor(Math.random() * 3) + 2}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}` : undefined,
-    }));
-};
+/** 格式化分钟 */
+function formatMinutes(minutes: number): string {
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${hours}h ${mins}m`;
+    }
+    return `${minutes}m`;
+}
 
 // ============================================
 // 顶部 Tab 组件
@@ -156,18 +129,10 @@ function RankingItemCard({
                 styles.coverContainer,
                 type === "artists" && styles.coverContainerRound
             ]}>
-                {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} style={styles.coverImage} />
-                ) : (
-                    <LinearGradient
-                        colors={["#8b5cf6", "#6366f1"]}
-                        style={styles.coverPlaceholder}
-                    >
-                        <Text style={styles.coverPlaceholderText}>
-                            {type === "tracks" ? "🎵" : type === "artists" ? "🎤" : "💿"}
-                        </Text>
-                    </LinearGradient>
-                )}
+                <Image
+                    source={{ uri: item.imageUrl || getAvatarUrl(item.name) }}
+                    style={styles.coverImage}
+                />
             </View>
 
             {/* 信息 */}
@@ -180,7 +145,7 @@ function RankingItemCard({
                 </Text>
             </View>
 
-            {/* 播放次数 */}
+            {/* 播放次数 & 时长 */}
             <View style={styles.statsContainer}>
                 <Text style={styles.playCount}>{item.playCount}</Text>
                 <Text style={styles.playLabel}>plays</Text>
@@ -199,43 +164,102 @@ function RankingItemCard({
 export default function RankingsScreen() {
     const router = useRouter();
     const [activeType, setActiveType] = useState<RankingType>("tracks");
-    const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState<StreamingStats | null>(null);
 
-    // 模拟数据
-    const [data, setData] = useState<RankingItem[]>(() =>
-        generateMockData("tracks", 20)
-    );
+    // 加载真实数据
+    useEffect(() => {
+        async function loadData() {
+            setIsLoading(true);
+            try {
+                const records = await loadRawStreamingRecords();
+                if (records.length > 0) {
+                    const parsed = parseStreamingHistory(records);
+                    setStats(parsed);
+                }
+            } catch (error) {
+                console.error("Failed to load ranking data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        loadData();
+    }, []);
+
+    // 转换为 RankingItem 格式
+    const data = useMemo((): RankingItem[] => {
+        if (!stats) return [];
+
+        if (activeType === "tracks") {
+            return stats.topTracks.map((track, index) => ({
+                id: `track-${index}`,
+                rank: index + 1,
+                name: track.name,
+                subtitle: track.artistName,
+                imageUrl: getAvatarUrl(track.name),
+                playCount: track.streamCount,
+                totalMinutes: track.totalMinutes,
+            }));
+        }
+
+        if (activeType === "artists") {
+            return stats.topArtists.map((artist, index) => ({
+                id: `artist-${index}`,
+                rank: index + 1,
+                name: artist.name,
+                subtitle: `${artist.topTracks?.[0]?.name || "Top artist"}`,
+                imageUrl: getAvatarUrl(artist.name),
+                playCount: artist.streamCount,
+                totalMinutes: artist.totalMinutes,
+            }));
+        }
+
+        // Albums - 从 tracks 中提取专辑信息
+        if (activeType === "albums") {
+            const albumMap = new Map<string, {
+                name: string;
+                artist: string;
+                playCount: number;
+                totalMinutes: number;
+            }>();
+
+            stats.topTracks.forEach(track => {
+                const key = `${track.albumName}::${track.artistName}`;
+                if (!albumMap.has(key)) {
+                    albumMap.set(key, {
+                        name: track.albumName,
+                        artist: track.artistName,
+                        playCount: 0,
+                        totalMinutes: 0,
+                    });
+                }
+                const album = albumMap.get(key)!;
+                album.playCount += track.streamCount;
+                album.totalMinutes += track.totalMinutes;
+            });
+
+            return Array.from(albumMap.values())
+                .sort((a, b) => b.playCount - a.playCount)
+                .slice(0, 50)
+                .map((album, index) => ({
+                    id: `album-${index}`,
+                    rank: index + 1,
+                    name: album.name,
+                    subtitle: album.artist,
+                    imageUrl: getAvatarUrl(album.name),
+                    playCount: album.playCount,
+                    totalMinutes: album.totalMinutes,
+                }));
+        }
+
+        return [];
+    }, [stats, activeType]);
 
     // 切换类型
     const handleTypeChange = useCallback((type: RankingType) => {
         if (type === activeType) return;
-
-        setIsLoading(true);
         setActiveType(type);
-
-        // 模拟加载
-        setTimeout(() => {
-            setData(generateMockData(type, 20));
-            setIsLoading(false);
-        }, 300);
     }, [activeType]);
-
-    // 加载更多
-    const handleLoadMore = useCallback(() => {
-        if (isLoadingMore || data.length >= 50) return;
-
-        setIsLoadingMore(true);
-        setTimeout(() => {
-            const moreData = generateMockData(activeType, 10).map((item, i) => ({
-                ...item,
-                id: `${activeType}-more-${data.length + i}`,
-                rank: data.length + i + 1,
-            }));
-            setData(prev => [...prev, ...moreData]);
-            setIsLoadingMore(false);
-        }, 500);
-    }, [activeType, data.length, isLoadingMore]);
 
     // 点击项目
     const handleItemPress = useCallback((item: RankingItem) => {
@@ -254,16 +278,10 @@ export default function RankingsScreen() {
         />
     ), [activeType, handleItemPress]);
 
-    // 渲染底部加载
-    const renderFooter = useCallback(() => {
-        if (!isLoadingMore) return <View style={{ height: 100 }} />;
-        return (
-            <View style={styles.loadingFooter}>
-                <ActivityIndicator color="#8b5cf6" size="small" />
-                <Text style={styles.loadingText}>Loading more...</Text>
-            </View>
-        );
-    }, [isLoadingMore]);
+    // 渲染底部
+    const renderFooter = useCallback(() => (
+        <View style={{ height: 100 }} />
+    ), []);
 
     // 渲染顶部 Tabs (作为 ListHeaderComponent)
     const renderListHeader = useCallback(() => (
@@ -292,33 +310,39 @@ export default function RankingsScreen() {
         </View>
     ), [activeType, handleTypeChange]);
 
-    // 渲染空状态加载
+    // 渲染空状态
     const renderEmptyComponent = useCallback(() => {
         if (isLoading) {
             return (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#8b5cf6" size="large" />
+                    <ActivityIndicator color="#1db954" size="large" />
+                    <Text style={styles.loadingText}>Loading your music...</Text>
                 </View>
             );
         }
-        return null;
+        return (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyEmoji}>📊</Text>
+                <Text style={styles.emptyTitle}>No Data Yet</Text>
+                <Text style={styles.emptyText}>
+                    Import your Spotify data in the Stats tab to see your rankings
+                </Text>
+            </View>
+        );
     }, [isLoading]);
 
     return (
         <View style={styles.container}>
-            {/* FlatList 作为最外层容器，顶部 Tabs 在 ListHeaderComponent 中 */}
             <FlatList
                 data={isLoading ? [] : data}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5}
                 ListHeaderComponent={renderListHeader}
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={renderEmptyComponent}
                 showsVerticalScrollIndicator={false}
-                stickyHeaderIndices={[0]} // 让 Tabs 固定在顶部
+                stickyHeaderIndices={[0]}
             />
         </View>
     );
@@ -339,7 +363,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: "#27272a",
-        backgroundColor: "#09090b", // 背景色用于 sticky header
+        backgroundColor: "#09090b",
     },
     topTab: {
         flex: 1,
@@ -377,9 +401,36 @@ const styles = StyleSheet.create({
         backgroundColor: "#1db954",
     },
     loadingContainer: {
-        height: 400, // 固定高度确保加载状态正确显示
+        height: 400,
         justifyContent: "center",
         alignItems: "center",
+    },
+    loadingText: {
+        color: "#71717a",
+        fontSize: 14,
+        marginTop: 12,
+    },
+    emptyContainer: {
+        height: 400,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 32,
+    },
+    emptyEmoji: {
+        fontSize: 48,
+        marginBottom: 16,
+    },
+    emptyTitle: {
+        color: "#ffffff",
+        fontSize: 20,
+        fontWeight: "700",
+        marginBottom: 8,
+    },
+    emptyText: {
+        color: "#71717a",
+        fontSize: 14,
+        textAlign: "center",
+        lineHeight: 20,
     },
     listContent: {
         paddingHorizontal: 16,
@@ -422,15 +473,6 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-    coverPlaceholder: {
-        width: "100%",
-        height: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    coverPlaceholderText: {
-        fontSize: 20,
-    },
     infoContainer: {
         flex: 1,
     },
@@ -461,17 +503,5 @@ const styles = StyleSheet.create({
         color: "#71717a",
         fontSize: 24,
         fontWeight: "300",
-    },
-    loadingFooter: {
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 20,
-        paddingBottom: 100,
-    },
-    loadingText: {
-        color: "#71717a",
-        fontSize: 14,
-        marginLeft: 8,
     },
 });

@@ -2,18 +2,26 @@
  * app/(music-vibe)/detail/[type]/[id].tsx - 详情页
  * 
  * 展示单曲/艺人/专辑的详细信息：
- * - 播放次数
- * - 播放时长
- * - 流派标签
- * - 返回导航
+ * - 使用真实 Spotify 数据
+ * - 播放次数和时长
+ * - Top Tracks (艺人/专辑)
  */
 
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions } from "react-native";
+import { useState, useEffect, useMemo } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, ActivityIndicator, Image } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DetailStatsChart, DetailStatsData, DetailType } from "../../../../components/stats/DetailStatsChart";
 import StatCard from "../../../../components/stats/StatCard";
+import {
+    type StreamingStats,
+    type TrackStats,
+    type ArtistStats,
+    type StreamingRecord,
+    parseStreamingHistory,
+} from "../../../../lib/spotify/streaming-history-parser";
+import { loadRawStreamingRecords } from "../../../../lib/spotify/streaming-history-storage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -28,159 +36,31 @@ interface DetailData {
     subtitle: string;
     playCount: number;
     totalMinutes: number;
-    genres: string[];
-    topTracks?: string[];
+    topTracks?: { name: string; playCount: number }[];
     firstListened?: string;
     lastListened?: string;
 }
 
-// Mock data - 与 rankings.tsx 保持同步
-const MOCK_DATA = {
-    tracks: {
-        names: [
-            "Blinding Lights", "Anti-Hero", "As It Was", "Stay", "Heat Waves",
-            "Bad Habit", "About Damn Time", "Running Up That Hill", "Shivers",
-            "Easy On Me", "Cold Heart", "Ghost", "Industry Baby", "good 4 u",
-            "Levitating", "Save Your Tears", "Montero", "Kiss Me More", "Peaches"
-        ],
-        subtitles: [
-            "The Weeknd", "Taylor Swift", "Harry Styles", "The Kid LAROI", "Glass Animals",
-            "Steve Lacy", "Lizzo", "Kate Bush", "Ed Sheeran", "Adele",
-            "Elton John", "Justin Bieber", "Lil Nas X", "Olivia Rodrigo", "Dua Lipa"
-        ],
-    },
-    artists: {
-        names: [
-            "Taylor Swift", "The Weeknd", "Drake", "Bad Bunny", "BTS",
-            "Ed Sheeran", "Harry Styles", "Doja Cat", "Billie Eilish", "Olivia Rodrigo",
-            "Post Malone", "Dua Lipa", "Justin Bieber", "Ariana Grande", "Kanye West"
-        ],
-        subtitles: [
-            "Pop", "R&B", "Hip-Hop", "Reggaeton", "K-Pop",
-            "Pop", "Pop", "Pop/Rap", "Alt Pop", "Pop",
-            "Hip-Hop", "Pop", "Pop", "Pop", "Hip-Hop"
-        ],
-    },
-    albums: {
-        names: [
-            "Midnights", "Renaissance", "Harry's House", "Un Verano Sin Ti", "30",
-            "=", "Dawn FM", "Happier Than Ever", "Planet Her", "SOUR",
-            "Future Nostalgia", "After Hours", "Fine Line", "Donda", "Positions"
-        ],
-        subtitles: [
-            "Taylor Swift", "Beyoncé", "Harry Styles", "Bad Bunny", "Adele",
-            "Ed Sheeran", "The Weeknd", "Billie Eilish", "Doja Cat", "Olivia Rodrigo"
-        ],
-    },
-};
+// ============================================
+// 工具函数
+// ============================================
 
-// 流派映射
-const GENRE_MAP: Record<string, string[]> = {
-    "The Weeknd": ["R&B", "Pop", "Synth-pop"],
-    "Taylor Swift": ["Pop", "Country Pop", "Indie Folk"],
-    "Drake": ["Hip-Hop", "R&B", "Rap"],
-    "Bad Bunny": ["Reggaeton", "Latin Trap", "Urbano"],
-    "Harry Styles": ["Pop", "Rock", "Soft Rock"],
-    "Doja Cat": ["Pop", "Rap", "R&B"],
-    "Billie Eilish": ["Alt Pop", "Electropop", "Dark Pop"],
-    "Ed Sheeran": ["Pop", "Folk Pop", "Acoustic"],
-    "default": ["Pop", "Electronic", "Alternative"],
-};
+/** 生成 ui-avatars 占位图 URL */
+function getAvatarUrl(name: string, size: number = 400): string {
+    const encodedName = encodeURIComponent(name);
+    return `https://ui-avatars.com/api/?name=${encodedName}&background=random&color=fff&size=${size}&bold=true`;
+}
 
-// Mock data generator - 根据 id 动态生成数据
-const getMockDetailData = (type: ItemType, id: string): DetailData => {
-    // ID 格式: "tracks-0", "artists-1", "albums-more-5"
-    const parts = id.split('-');
-    let index = 0;
-
-    // 处理 "tracks-more-5" 格式
-    if (parts.includes('more')) {
-        index = parseInt(parts[parts.length - 1]) || 0;
-    } else {
-        index = parseInt(parts[parts.length - 1]) || 0;
+/** 格式化日期 */
+function formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return "Unknown";
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+        return "Unknown";
     }
-
-    const data = MOCK_DATA[type] || MOCK_DATA.tracks;
-    const name = data.names[index % data.names.length] || `Unknown ${type}`;
-    const subtitle = data.subtitles[index % data.subtitles.length] || "Unknown Artist";
-
-    // 根据 index 生成一致的随机数据 (使用 index 作为种子)
-    const seed = index + 1;
-    const playCount = type === "artists"
-        ? 1000 + seed * 150
-        : type === "albums"
-            ? 300 + seed * 80
-            : 100 + seed * 25;
-
-    const totalMinutes = type === "artists"
-        ? 4000 + seed * 400
-        : type === "albums"
-            ? 1500 + seed * 200
-            : 300 + seed * 50;
-
-    // 获取流派
-    const artistName = type === "artists" ? name : subtitle;
-    const genres = GENRE_MAP[artistName] || GENRE_MAP["default"];
-
-    // 为艺人和专辑生成 top tracks
-    const topTracks = type !== "tracks" ? [
-        MOCK_DATA.tracks.names[(index * 3) % MOCK_DATA.tracks.names.length],
-        MOCK_DATA.tracks.names[(index * 3 + 1) % MOCK_DATA.tracks.names.length],
-        MOCK_DATA.tracks.names[(index * 3 + 2) % MOCK_DATA.tracks.names.length],
-        MOCK_DATA.tracks.names[(index * 3 + 3) % MOCK_DATA.tracks.names.length],
-    ] : undefined;
-
-    // 生成日期
-    const year = 2020 + (index % 4);
-    const month = ((index * 3) % 12) + 1;
-    const day = ((index * 7) % 28) + 1;
-
-    return {
-        name,
-        subtitle: type === "albums" ? `${subtitle} • ${year}` : subtitle,
-        playCount,
-        totalMinutes,
-        genres,
-        topTracks,
-        firstListened: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        lastListened: "2024-12-11",
-    };
-};
-
-// Mock chart data generator (实际应从 Supabase 获取)
-const getMockChartData = (type: ItemType, id: string): DetailStatsData => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-
-    // 解析 index 用于生成一致的数据
-    const parts = id.split('-');
-    const index = parseInt(parts[parts.length - 1]) || 0;
-    const seed = index + 1;
-
-    // 使用 seed 生成一致的数据而非随机
-    const baseCount = type === "artists" ? 80 : type === "albums" ? 40 : 20;
-    const basePlays = type === "artists" ? 1000 + seed * 150 : type === "albums" ? 300 + seed * 80 : 100 + seed * 25;
-    const baseMinutes = type === "artists" ? 4000 + seed * 400 : type === "albums" ? 1500 + seed * 200 : 300 + seed * 50;
-
-    return {
-        monthlyPlays: months.map((month, i) => ({
-            month,
-            count: baseCount + ((seed * (i + 1) * 7) % 30)
-        })),
-        hourlyDistribution: hours.map((hour, i) => ({
-            hour,
-            percentage: ((seed + i) * 3) % 25
-        })),
-        totalPlays: basePlays,
-        totalMinutes: baseMinutes,
-        avgPerSession: 2.5 + (seed % 3),
-        streak: type === "tracks" ? 5 + (seed % 20) : undefined,
-    };
-};
-
-// ============================================
-// Detail 主组件
-// ============================================
+}
 
 // ============================================
 // Detail 主组件
@@ -191,17 +71,233 @@ export default function DetailScreen() {
     const insets = useSafeAreaInsets();
     const { type, id } = useLocalSearchParams<{ type: ItemType; id: string }>();
 
-    const itemType = (type as ItemType) || "tracks";
-    const data = getMockDetailData(itemType, id || "");
-    const chartData = getMockChartData(itemType, id || "");
+    const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState<StreamingStats | null>(null);
+    const [records, setRecords] = useState<StreamingRecord[]>([]);
 
-    // 映射 type 到 DetailType (tracks -> track)
-    const detailType: DetailType = itemType === "tracks" ? "track" : itemType === "artists" ? "artist" : "album";
+    const itemType = (type as ItemType) || "tracks";
+
+    // 加载数据
+    useEffect(() => {
+        async function loadData() {
+            setIsLoading(true);
+            try {
+                const rawRecords = await loadRawStreamingRecords();
+                if (rawRecords.length > 0) {
+                    setRecords(rawRecords);
+                    const parsed = parseStreamingHistory(rawRecords);
+                    setStats(parsed);
+                }
+            } catch (error) {
+                console.error("Failed to load detail data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        loadData();
+    }, []);
+
+    // 从 ID 解析索引
+    const itemIndex = useMemo(() => {
+        if (!id) return 0;
+        const parts = id.split("-");
+        return parseInt(parts[parts.length - 1]) || 0;
+    }, [id]);
+
+    // 获取详情数据
+    const data = useMemo((): DetailData | null => {
+        if (!stats) return null;
+
+        if (itemType === "tracks") {
+            const track = stats.topTracks[itemIndex];
+            if (!track) return null;
+
+            // 查找首次和最后播放时间
+            const trackRecords = records.filter(
+                r => r.master_metadata_track_name === track.name &&
+                    r.master_metadata_album_artist_name === track.artistName
+            );
+            const timestamps = trackRecords.map(r => r.ts).sort();
+
+            return {
+                name: track.name,
+                subtitle: track.artistName,
+                playCount: track.streamCount,
+                totalMinutes: track.totalMinutes,
+                firstListened: timestamps[0],
+                lastListened: timestamps[timestamps.length - 1],
+            };
+        }
+
+        if (itemType === "artists") {
+            const artist = stats.topArtists[itemIndex];
+            if (!artist) return null;
+
+            // 查找首次和最后播放时间
+            const artistRecords = records.filter(
+                r => r.master_metadata_album_artist_name === artist.name
+            );
+            const timestamps = artistRecords.map(r => r.ts).sort();
+
+            return {
+                name: artist.name,
+                subtitle: `${artist.streamCount} streams`,
+                playCount: artist.streamCount,
+                totalMinutes: artist.totalMinutes,
+                topTracks: artist.topTracks.map(t => ({
+                    name: t.name,
+                    playCount: t.streamCount,
+                })),
+                firstListened: timestamps[0],
+                lastListened: timestamps[timestamps.length - 1],
+            };
+        }
+
+        if (itemType === "albums") {
+            // 从 tracks 中聚合专辑数据
+            const albumMap = new Map<string, {
+                name: string;
+                artist: string;
+                playCount: number;
+                totalMinutes: number;
+                tracks: { name: string; playCount: number }[];
+                timestamps: string[];
+            }>();
+
+            records.forEach(record => {
+                if (!record.master_metadata_album_album_name || !record.master_metadata_album_artist_name) return;
+                if (record.ms_played < 30000) return;
+
+                const key = `${record.master_metadata_album_album_name}::${record.master_metadata_album_artist_name}`;
+                if (!albumMap.has(key)) {
+                    albumMap.set(key, {
+                        name: record.master_metadata_album_album_name,
+                        artist: record.master_metadata_album_artist_name,
+                        playCount: 0,
+                        totalMinutes: 0,
+                        tracks: [],
+                        timestamps: [],
+                    });
+                }
+                const album = albumMap.get(key)!;
+                album.playCount++;
+                album.totalMinutes += Math.round(record.ms_played / 60000);
+                album.timestamps.push(record.ts);
+
+                // 添加 track
+                const existingTrack = album.tracks.find(t => t.name === record.master_metadata_track_name);
+                if (existingTrack) {
+                    existingTrack.playCount++;
+                } else if (record.master_metadata_track_name) {
+                    album.tracks.push({ name: record.master_metadata_track_name, playCount: 1 });
+                }
+            });
+
+            const albums = Array.from(albumMap.values())
+                .sort((a, b) => b.playCount - a.playCount);
+
+            const album = albums[itemIndex];
+            if (!album) return null;
+
+            const sortedTimestamps = album.timestamps.sort();
+
+            return {
+                name: album.name,
+                subtitle: album.artist,
+                playCount: album.playCount,
+                totalMinutes: album.totalMinutes,
+                topTracks: album.tracks.sort((a, b) => b.playCount - a.playCount).slice(0, 5),
+                firstListened: sortedTimestamps[0],
+                lastListened: sortedTimestamps[sortedTimestamps.length - 1],
+            };
+        }
+
+        return null;
+    }, [stats, records, itemType, itemIndex]);
+
+    // 生成图表数据
+    const chartData = useMemo((): DetailStatsData | null => {
+        if (!data || !records.length) return null;
+
+        // 过滤相关记录
+        let relevantRecords: StreamingRecord[] = [];
+        if (itemType === "tracks" && stats?.topTracks[itemIndex]) {
+            const track = stats.topTracks[itemIndex];
+            relevantRecords = records.filter(
+                r => r.master_metadata_track_name === track.name &&
+                    r.master_metadata_album_artist_name === track.artistName
+            );
+        } else if (itemType === "artists" && stats?.topArtists[itemIndex]) {
+            const artist = stats.topArtists[itemIndex];
+            relevantRecords = records.filter(
+                r => r.master_metadata_album_artist_name === artist.name
+            );
+        } else if (itemType === "albums") {
+            // 需要先找到专辑名
+            const albumMap = new Map<string, { name: string; artist: string; playCount: number }>();
+            records.forEach(r => {
+                if (!r.master_metadata_album_album_name || !r.master_metadata_album_artist_name) return;
+                if (r.ms_played < 30000) return;
+                const key = `${r.master_metadata_album_album_name}::${r.master_metadata_album_artist_name}`;
+                if (!albumMap.has(key)) {
+                    albumMap.set(key, {
+                        name: r.master_metadata_album_album_name,
+                        artist: r.master_metadata_album_artist_name,
+                        playCount: 0
+                    });
+                }
+                albumMap.get(key)!.playCount++;
+            });
+            const albums = Array.from(albumMap.values()).sort((a, b) => b.playCount - a.playCount);
+            const album = albums[itemIndex];
+            if (album) {
+                relevantRecords = records.filter(
+                    r => r.master_metadata_album_album_name === album.name &&
+                        r.master_metadata_album_artist_name === album.artist
+                );
+            }
+        }
+
+        // 计算月度播放
+        const monthlyMap = new Map<string, number>();
+        const hourlyMap = new Map<number, number>();
+
+        relevantRecords.forEach(r => {
+            const date = new Date(r.ts);
+            const monthKey = date.toLocaleDateString("en-US", { month: "short" });
+            monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + 1);
+
+            const hour = date.getHours();
+            hourlyMap.set(hour, (hourlyMap.get(hour) || 0) + 1);
+        });
+
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthlyPlays = months
+            .filter(m => monthlyMap.has(m))
+            .map(month => ({ month, count: monthlyMap.get(month) || 0 }));
+
+        const totalHourly = Array.from(hourlyMap.values()).reduce((a, b) => a + b, 0) || 1;
+        const hourlyDistribution = Array.from({ length: 24 }, (_, i) => ({
+            hour: i.toString().padStart(2, "0"),
+            percentage: Math.round((hourlyMap.get(i) || 0) / totalHourly * 100),
+        }));
+
+        return {
+            monthlyPlays: monthlyPlays.length > 0 ? monthlyPlays : [{ month: "N/A", count: 0 }],
+            hourlyDistribution,
+            totalPlays: data.playCount,
+            totalMinutes: data.totalMinutes,
+            avgPerSession: relevantRecords.length > 0
+                ? Math.round(data.totalMinutes / relevantRecords.length * 10) / 10
+                : 0,
+        };
+    }, [data, records, stats, itemType, itemIndex]);
 
     const typeEmoji = itemType === "tracks" ? "🎵" : itemType === "artists" ? "🎤" : "💿";
     const typeLabel = itemType === "tracks" ? "Track" : itemType === "artists" ? "Artist" : "Album";
+    const detailType: DetailType = itemType === "tracks" ? "track" : itemType === "artists" ? "artist" : "album";
 
-    // 安全的返回处理函数
+    // 返回处理
     const handleGoBack = () => {
         if (router.canGoBack()) {
             router.back();
@@ -209,6 +305,27 @@ export default function DetailScreen() {
             router.replace("/(music-vibe)/rankings");
         }
     };
+
+    if (isLoading) {
+        return (
+            <View style={[styles.container, styles.loadingContainer]}>
+                <ActivityIndicator size="large" color="#1db954" />
+                <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+        );
+    }
+
+    if (!data) {
+        return (
+            <View style={[styles.container, styles.loadingContainer]}>
+                <Text style={styles.emptyEmoji}>😕</Text>
+                <Text style={styles.emptyText}>No data found</Text>
+                <Pressable onPress={handleGoBack} style={styles.backButtonEmpty}>
+                    <Text style={styles.backButtonText}>← Go Back</Text>
+                </Pressable>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -227,14 +344,21 @@ export default function DetailScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Cover / Hero */}
-                <LinearGradient
-                    colors={["#8b5cf6", "#6366f1", "#4f46e5"]}
-                    style={styles.hero}
-                >
-                    <Text style={styles.heroEmoji}>{typeEmoji}</Text>
-                    <Text style={styles.heroName}>{data.name}</Text>
-                    <Text style={styles.heroSubtitle}>{data.subtitle}</Text>
-                </LinearGradient>
+                <View style={styles.heroContainer}>
+                    <Image
+                        source={{ uri: getAvatarUrl(data.name) }}
+                        style={styles.heroImage}
+                    />
+                    <LinearGradient
+                        colors={["transparent", "rgba(0,0,0,0.8)", "#09090b"]}
+                        style={styles.heroGradient}
+                    />
+                    <View style={styles.heroContent}>
+                        <Text style={styles.heroEmoji}>{typeEmoji}</Text>
+                        <Text style={styles.heroName}>{data.name}</Text>
+                        <Text style={styles.heroSubtitle}>{data.subtitle}</Text>
+                    </View>
+                </View>
 
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
@@ -250,26 +374,15 @@ export default function DetailScreen() {
                     />
                 </View>
 
-                {/* Genres */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>🏷️ Genres</Text>
-                    <View style={styles.genreTags}>
-                        {data.genres.map((genre, index) => (
-                            <View key={index} style={styles.genreTag}>
-                                <Text style={styles.genreTagText}>{genre}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
                 {/* Top Tracks (for artists/albums) */}
-                {data.topTracks && (
+                {data.topTracks && data.topTracks.length > 0 && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>🔥 Top Tracks</Text>
-                        {data.topTracks.map((track, index) => (
+                        {data.topTracks.slice(0, 5).map((track, index) => (
                             <View key={index} style={styles.trackRow}>
                                 <Text style={styles.trackRank}>#{index + 1}</Text>
-                                <Text style={styles.trackName}>{track}</Text>
+                                <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
+                                <Text style={styles.trackPlays}>{track.playCount}</Text>
                             </View>
                         ))}
                     </View>
@@ -281,18 +394,18 @@ export default function DetailScreen() {
                     <View style={styles.timelineCard}>
                         <View style={styles.timelineRow}>
                             <Text style={styles.timelineLabel}>First Listened</Text>
-                            <Text style={styles.timelineValue}>{data.firstListened}</Text>
+                            <Text style={styles.timelineValue}>{formatDate(data.firstListened)}</Text>
                         </View>
                         <View style={styles.timelineDivider} />
                         <View style={styles.timelineRow}>
                             <Text style={styles.timelineLabel}>Last Listened</Text>
-                            <Text style={styles.timelineValue}>{data.lastListened}</Text>
+                            <Text style={styles.timelineValue}>{formatDate(data.lastListened)}</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* 复用的统计图表组件 */}
-                <DetailStatsChart type={detailType} data={chartData} />
+                {/* 统计图表 */}
+                {chartData && <DetailStatsChart type={detailType} data={chartData} />}
 
                 {/* Bottom spacing */}
                 <View style={{ height: 40 }} />
@@ -309,6 +422,29 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#09090b",
+    },
+    loadingContainer: {
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    loadingText: {
+        color: "#71717a",
+        marginTop: 12,
+    },
+    emptyEmoji: {
+        fontSize: 48,
+        marginBottom: 16,
+    },
+    emptyText: {
+        color: "#71717a",
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    backButtonEmpty: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: "#27272a",
+        borderRadius: 12,
     },
     header: {
         flexDirection: "row",
@@ -327,7 +463,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     backButtonText: {
-        color: "#8b5cf6",
+        color: "#1db954",
         fontSize: 14,
         fontWeight: "600",
     },
@@ -343,60 +479,60 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     content: {
-        padding: 16,
+        paddingBottom: 16,
     },
-    hero: {
-        borderRadius: 20,
-        padding: 32,
-        alignItems: "center",
+    heroContainer: {
+        height: 280,
         marginBottom: 20,
+        position: "relative",
+    },
+    heroImage: {
+        width: "100%",
+        height: "100%",
+        position: "absolute",
+    },
+    heroGradient: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 200,
+    },
+    heroContent: {
+        position: "absolute",
+        bottom: 20,
+        left: 16,
+        right: 16,
     },
     heroEmoji: {
-        fontSize: 64,
-        marginBottom: 16,
+        fontSize: 32,
+        marginBottom: 8,
     },
     heroName: {
         color: "#ffffff",
         fontSize: 24,
         fontWeight: "700",
-        textAlign: "center",
-        marginBottom: 8,
+        marginBottom: 4,
     },
     heroSubtitle: {
-        color: "rgba(255, 255, 255, 0.8)",
+        color: "rgba(255, 255, 255, 0.7)",
         fontSize: 16,
     },
     statsGrid: {
         flexDirection: "row",
         gap: 12,
         marginBottom: 20,
+        paddingHorizontal: 16,
     },
-    // StatCard 样式现在由共享组件 components/stats/StatCard.tsx 提供
     section: {
         marginBottom: 20,
+        paddingHorizontal: 16,
     },
     sectionTitle: {
         color: "#ffffff",
         fontSize: 16,
         fontWeight: "600",
         marginBottom: 12,
-    },
-    genreTags: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-    },
-    genreTag: {
-        backgroundColor: "rgba(139, 92, 246, 0.2)",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "rgba(139, 92, 246, 0.4)",
-    },
-    genreTagText: {
-        color: "#a78bfa",
-        fontSize: 14,
     },
     trackRow: {
         flexDirection: "row",
@@ -418,6 +554,11 @@ const styles = StyleSheet.create({
         color: "#ffffff",
         fontSize: 15,
         flex: 1,
+    },
+    trackPlays: {
+        color: "#1db954",
+        fontSize: 14,
+        fontWeight: "600",
     },
     timelineCard: {
         backgroundColor: "#18181b",
