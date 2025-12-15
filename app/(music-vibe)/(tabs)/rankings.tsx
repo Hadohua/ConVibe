@@ -22,6 +22,7 @@ import {
     parseStreamingHistory,
 } from "../../../lib/spotify/streaming-history-parser";
 import { loadRawStreamingRecords } from "../../../lib/spotify/streaming-history-storage";
+import SpotifyImage, { ArtistImage, TrackImage, AlbumImage } from "../../../components/SpotifyImage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -124,15 +125,32 @@ function RankingItemCard({
                 </Text>
             </View>
 
-            {/* 封面图 */}
+            {/* 封面图 - 使用 Spotify API 获取 */}
             <View style={[
                 styles.coverContainer,
                 type === "artists" && styles.coverContainerRound
             ]}>
-                <Image
-                    source={{ uri: item.imageUrl || getAvatarUrl(item.name) }}
-                    style={styles.coverImage}
-                />
+                {type === "artists" ? (
+                    <ArtistImage
+                        name={item.name}
+                        size={48}
+                        style={styles.coverImage}
+                    />
+                ) : type === "albums" ? (
+                    <AlbumImage
+                        name={item.name}
+                        artistName={item.subtitle}
+                        size={48}
+                        style={styles.coverImage}
+                    />
+                ) : (
+                    <TrackImage
+                        name={item.name}
+                        artistName={item.subtitle}
+                        size={48}
+                        style={styles.coverImage}
+                    />
+                )}
             </View>
 
             {/* 信息 */}

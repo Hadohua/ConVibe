@@ -30,6 +30,7 @@ import {
 } from "../../../lib/spotify/streaming-history-parser";
 import { loadRawStreamingRecords } from "../../../lib/spotify/streaming-history-storage";
 import SpotifyDataImport from "../../../components/SpotifyDataImport";
+import { ArtistImage, TrackImage } from "../../../components/SpotifyImage";
 
 // ============================================
 // 类型定义
@@ -97,8 +98,8 @@ function TimeRangeSelector({
                 >
                     <Text
                         className={`text-center text-sm font-medium ${value === option.value
-                                ? "text-white"
-                                : "text-neutral-500"
+                            ? "text-white"
+                            : "text-neutral-500"
                             }`}
                     >
                         {option.label}
@@ -173,11 +174,11 @@ function TopArtistHeroCard({
 
     return (
         <View className="flex-1 rounded-2xl overflow-hidden h-44">
-            {/* 背景图片 */}
-            <Image
-                source={{ uri: getAvatarUrl(artist.name, 400) }}
-                className="absolute inset-0 w-full h-full"
-                resizeMode="cover"
+            {/* 背景图片 - 使用 Spotify API 获取 */}
+            <ArtistImage
+                name={artist.name}
+                size={400}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
             />
             {/* 渐变遮罩 */}
             <LinearGradient
@@ -246,13 +247,13 @@ function ListItem({
     name,
     subtitle,
     value,
-    imageUrl,
+    type,
 }: {
     rank: number;
     name: string;
     subtitle: string;
     value: string;
-    imageUrl: string;
+    type: 'artist' | 'track';
 }) {
     return (
         <View className="flex-row items-center py-3 border-b border-neutral-800/50">
@@ -260,11 +261,21 @@ function ListItem({
             <Text className="text-neutral-500 text-sm font-medium w-8">
                 {rank}
             </Text>
-            {/* 封面图 */}
-            <Image
-                source={{ uri: imageUrl }}
-                className="w-12 h-12 rounded-lg mr-3"
-            />
+            {/* 封面图 - 使用 Spotify API 获取 */}
+            {type === 'artist' ? (
+                <ArtistImage
+                    name={name}
+                    size={48}
+                    style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
+                />
+            ) : (
+                <TrackImage
+                    name={name}
+                    artistName={subtitle}
+                    size={48}
+                    style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
+                />
+            )}
             {/* 信息 */}
             <View className="flex-1">
                 <Text className="text-white font-semibold" numberOfLines={1}>
@@ -419,7 +430,7 @@ export default function StatsScreen() {
                         ? formatMinutes(artist.totalMinutes)
                         : formatNumber(artist.streamCount)
                 }
-                imageUrl={getAvatarUrl(artist.name)}
+                type="artist"
             />
         ));
     };
@@ -437,7 +448,7 @@ export default function StatsScreen() {
                         ? formatMinutes(track.totalMinutes)
                         : formatNumber(track.streamCount)
                 }
-                imageUrl={getAvatarUrl(track.name)}
+                type="track"
             />
         ));
     };
