@@ -22,6 +22,8 @@ interface LeaderboardListProps {
     topArtists: ArtistStats[];
     /** 最多显示条数 */
     limit?: number;
+    /** 排序和显示指标: 'streams' 按播放次数, 'minutes' 按播放时长 */
+    metric?: 'streams' | 'minutes';
 }
 
 // ============================================
@@ -41,18 +43,21 @@ export default function LeaderboardList({
     topTracks,
     topArtists,
     limit = 10,
+    metric = 'minutes',
 }: LeaderboardListProps) {
     const [activeTab, setActiveTab] = useState<TabType>("tracks");
-    const [sortBy, setSortBy] = useState<SortMetric>("streamCount");
+
+    // 根据 metric prop 决定排序方式
+    const sortMetric: SortMetric = metric === 'streams' ? 'streamCount' : 'totalMs';
 
     // 动态排序
     const sortedTracks = useMemo(
-        () => sortTracksByMetric(topTracks, sortBy).slice(0, limit),
-        [topTracks, sortBy, limit]
+        () => sortTracksByMetric(topTracks, sortMetric).slice(0, limit),
+        [topTracks, sortMetric, limit]
     );
     const sortedArtists = useMemo(
-        () => sortArtistsByMetric(topArtists, sortBy).slice(0, limit),
-        [topArtists, sortBy, limit]
+        () => sortArtistsByMetric(topArtists, sortMetric).slice(0, limit),
+        [topArtists, sortMetric, limit]
     );
 
     return (
@@ -80,32 +85,12 @@ export default function LeaderboardList({
                 ))}
             </View>
 
-            {/* 排序切换 */}
-            <View className="flex-row gap-2 px-4 py-2 border-b border-dark-50/30">
-                <Pressable
-                    onPress={() => setSortBy("streamCount")}
-                    className={`px-3 py-1.5 rounded-lg ${sortBy === "streamCount" ? "bg-purple-600" : "bg-dark-50"}`}
-                >
-                    <Text className={`text-sm ${sortBy === "streamCount" ? "text-white font-medium" : "text-gray-400"}`}>
-                        按次数
-                    </Text>
-                </Pressable>
-                <Pressable
-                    onPress={() => setSortBy("totalMs")}
-                    className={`px-3 py-1.5 rounded-lg ${sortBy === "totalMs" ? "bg-purple-600" : "bg-dark-50"}`}
-                >
-                    <Text className={`text-sm ${sortBy === "totalMs" ? "text-white font-medium" : "text-gray-400"}`}>
-                        按时长
-                    </Text>
-                </Pressable>
-            </View>
-
             {/* 列表内容 */}
             <View className="p-4">
                 {activeTab === "tracks" ? (
-                    <TrackList tracks={sortedTracks} sortBy={sortBy} />
+                    <TrackList tracks={sortedTracks} metric={metric} />
                 ) : (
-                    <ArtistList artists={sortedArtists} sortBy={sortBy} />
+                    <ArtistList artists={sortedArtists} metric={metric} />
                 )}
             </View>
         </View>
@@ -116,7 +101,7 @@ export default function LeaderboardList({
 // TrackList 子组件
 // ============================================
 
-function TrackList({ tracks, sortBy }: { tracks: TrackStats[]; sortBy: SortMetric }) {
+function TrackList({ tracks, metric }: { tracks: TrackStats[]; metric: 'streams' | 'minutes' }) {
     if (tracks.length === 0) {
         return (
             <View className="py-8 items-center">
@@ -128,23 +113,20 @@ function TrackList({ tracks, sortBy }: { tracks: TrackStats[]; sortBy: SortMetri
     return (
         <View>
             {tracks.map((track, index) => (
-                <TrackItem key={`${track.artistName}-${track.name}`} track={track} rank={index + 1} sortBy={sortBy} />
+                <TrackItem key={`${track.artistName}-${track.name}`} track={track} rank={index + 1} metric={metric} />
             ))}
         </View>
     );
 }
 
-function TrackItem({ track, rank, sortBy }: { track: TrackStats; rank: number; sortBy: SortMetric }) {
+function TrackItem({ track, rank, metric }: { track: TrackStats; rank: number; metric: 'streams' | 'minutes' }) {
     // 使用 Spotify CDN 占位图
     const placeholderImage = "https://i.scdn.co/image/ab67616d00004851e8e28219724c2423afa4d320";
 
-    // 根据排序方式突出显示对应指标
-    const primaryMetric = sortBy === "streamCount"
-        ? `${track.streamCount} 播放`
-        : `${track.totalMinutes} 分钟`;
-    const secondaryMetric = sortBy === "streamCount"
-        ? `${track.totalMinutes}分钟`
-        : `${track.streamCount}播放`;
+    // 根据 metric 格式化显示内容
+    const primaryValue = metric === 'streams'
+        ? `${track.streamCount.toLocaleString()} streams`
+        : `${track.totalMinutes.toLocaleString()} min`;
 
     return (
         <View className="flex-row items-center py-3 border-b border-dark-50/30">
@@ -170,13 +152,17 @@ function TrackItem({ track, rank, sortBy }: { track: TrackStats; rank: number; s
                 <Text className="text-white font-medium" numberOfLines={1}>
                     {track.name}
                 </Text>
-                <Text className="text-gray-500 text-sm">
-                    <Text className="text-purple-400">{primaryMetric}</Text> · {secondaryMetric} · {track.artistName}
+                <Text className="text-gray-500 text-sm" numberOfLines={1}>
+                    {track.artistName}
                 </Text>
             </View>
 
-            {/* 箭头 */}
-            <Text className="text-gray-600 text-lg">›</Text>
+            {/* 数值 - 固定宽度右对齐 */}
+            <View className="min-w-[80px] items-end">
+                <Text className="text-purple-400 font-medium text-sm">
+                    {primaryValue}
+                </Text>
+            </View>
         </View>
     );
 }
@@ -185,7 +171,7 @@ function TrackItem({ track, rank, sortBy }: { track: TrackStats; rank: number; s
 // ArtistList 子组件
 // ============================================
 
-function ArtistList({ artists, sortBy }: { artists: ArtistStats[]; sortBy: SortMetric }) {
+function ArtistList({ artists, metric }: { artists: ArtistStats[]; metric: 'streams' | 'minutes' }) {
     if (artists.length === 0) {
         return (
             <View className="py-8 items-center">
@@ -197,23 +183,20 @@ function ArtistList({ artists, sortBy }: { artists: ArtistStats[]; sortBy: SortM
     return (
         <View>
             {artists.map((artist, index) => (
-                <ArtistItem key={artist.name} artist={artist} rank={index + 1} sortBy={sortBy} />
+                <ArtistItem key={artist.name} artist={artist} rank={index + 1} metric={metric} />
             ))}
         </View>
     );
 }
 
-function ArtistItem({ artist, rank, sortBy }: { artist: ArtistStats; rank: number; sortBy: SortMetric }) {
+function ArtistItem({ artist, rank, metric }: { artist: ArtistStats; rank: number; metric: 'streams' | 'minutes' }) {
     const tier = calculateTierFromPlaytime(artist.totalHours);
     const tierInfo = getTierInfo(tier);
 
-    // 根据排序方式突出显示对应指标
-    const primaryMetric = sortBy === "streamCount"
-        ? `${artist.streamCount} 播放`
-        : `${artist.totalHours} 小时`;
-    const secondaryMetric = sortBy === "streamCount"
-        ? `${artist.totalHours}小时`
-        : `${artist.streamCount}播放`;
+    // 根据 metric 格式化显示内容
+    const primaryValue = metric === 'streams'
+        ? `${artist.streamCount.toLocaleString()} streams`
+        : `${artist.totalMinutes.toLocaleString()} min`;
 
     return (
         <View className="flex-row items-center py-3 border-b border-dark-50/30">
@@ -247,13 +230,14 @@ function ArtistItem({ artist, rank, sortBy }: { artist: ArtistStats; rank: numbe
                         </View>
                     )}
                 </View>
-                <Text className="text-gray-500 text-sm">
-                    <Text className="text-purple-400">{primaryMetric}</Text> · {secondaryMetric}
-                </Text>
             </View>
 
-            {/* 箭头 */}
-            <Text className="text-gray-600 text-lg">›</Text>
+            {/* 数值 - 固定宽度右对齐 */}
+            <View className="min-w-[80px] items-end">
+                <Text className="text-purple-400 font-medium text-sm">
+                    {primaryValue}
+                </Text>
+            </View>
         </View>
     );
 }

@@ -42,6 +42,9 @@ export interface ArtistStats {
     topTracks: TrackStats[];
 }
 
+/** 时间范围筛选类型 (4周、6个月、终身) */
+export type DateRange = '4W' | '6M' | 'LT';
+
 /** 整体统计结果 */
 export interface StreamingStats {
     // 总体统计
@@ -343,6 +346,47 @@ export function parseStreamingHistoryWithFilter(
     endDate: Date | null
 ): StreamingStats {
     const filtered = filterRecordsByDateRange(records, startDate, endDate);
+    return parseStreamingHistory(filtered);
+}
+
+/**
+ * 根据 stats.fm 风格的时间范围筛选记录并生成统计数据
+ * 
+ * @param records - 原始播放记录数组
+ * @param range - 时间范围: '4W' (4周), '6M' (6个月), 'LT' (终身/全部)
+ * @returns 根据时间范围筛选后的统计数据
+ */
+export function filterStatsByRange(
+    records: StreamingRecord[],
+    range: DateRange
+): StreamingStats {
+    // 终身范围直接返回全部数据
+    if (range === 'LT') {
+        return parseStreamingHistory(records);
+    }
+
+    // 计算起始日期
+    const now = new Date();
+    let startDate: Date;
+
+    switch (range) {
+        case '4W':
+            // 4周前
+            startDate = new Date(now);
+            startDate.setDate(startDate.getDate() - 28);
+            break;
+        case '6M':
+            // 6个月前
+            startDate = new Date(now);
+            startDate.setMonth(startDate.getMonth() - 6);
+            break;
+        default:
+            // 默认返回全部
+            return parseStreamingHistory(records);
+    }
+
+    // 筛选记录并重新生成统计数据
+    const filtered = filterRecordsByDateRange(records, startDate, null);
     return parseStreamingHistory(filtered);
 }
 

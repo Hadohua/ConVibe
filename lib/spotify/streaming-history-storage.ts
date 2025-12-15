@@ -6,9 +6,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { StreamingStats } from './streaming-history-parser';
+import type { StreamingStats, StreamingRecord } from './streaming-history-parser';
 
 const STORAGE_KEY = '@vibe_consensus/spotify_streaming_stats';
+const RAW_RECORDS_KEY = '@vibe_consensus/spotify_raw_records';
 
 /**
  * 保存统计数据到本地存储
@@ -74,4 +75,35 @@ export async function getImportTime(): Promise<Date | null> {
         return new Date(stats.importedAt);
     }
     return null;
+}
+
+/**
+ * 保存原始播放记录到本地存储
+ */
+export async function saveRawStreamingRecords(records: StreamingRecord[]): Promise<void> {
+    try {
+        const jsonValue = JSON.stringify(records);
+        await AsyncStorage.setItem(RAW_RECORDS_KEY, jsonValue);
+        console.log('Raw streaming records saved successfully');
+    } catch (error) {
+        console.error('Failed to save raw streaming records:', error);
+        throw error;
+    }
+}
+
+/**
+ * 从本地存储读取原始播放记录（未聚合的 JSON 数组）
+ * 用于 stats.fm 风格的时间筛选功能
+ */
+export async function loadRawStreamingRecords(): Promise<StreamingRecord[]> {
+    try {
+        const jsonValue = await AsyncStorage.getItem(RAW_RECORDS_KEY);
+        if (jsonValue === null) {
+            return [];
+        }
+        return JSON.parse(jsonValue) as StreamingRecord[];
+    } catch (error) {
+        console.error('Failed to load raw streaming records:', error);
+        return [];
+    }
 }
