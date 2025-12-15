@@ -30,6 +30,8 @@ export interface TrackStats {
     totalMinutes: number;
     streamCount: number;
     uri: string | null;
+    /** 封面图片 URL（来自 Spotify API 或其他来源） */
+    imageUrl?: string;
 }
 
 /** 艺人统计 */
@@ -40,6 +42,8 @@ export interface ArtistStats {
     totalHours: number;
     streamCount: number;
     topTracks: TrackStats[];
+    /** 艺人头像 URL（来自 Spotify API 或其他来源） */
+    imageUrl?: string;
 }
 
 /** 时间范围筛选类型 (4周、6个月、终身) */
@@ -75,15 +79,43 @@ export interface StreamingStats {
  * 解析 Spotify 流媒体历史 JSON 数据
  * 
  * @param jsonContent - JSON 文件内容（字符串或已解析的数组）
+ * @param range - 可选，时间范围筛选: '4W' (4周), '6M' (6个月), 'LT' (终身/全部，默认)
  * @returns 统计结果
  */
 export function parseStreamingHistory(
-    jsonContent: string | StreamingRecord[]
+    jsonContent: string | StreamingRecord[],
+    range: DateRange = 'LT'
 ): StreamingStats {
     // 解析 JSON
-    const records: StreamingRecord[] = typeof jsonContent === 'string'
+    let records: StreamingRecord[] = typeof jsonContent === 'string'
         ? JSON.parse(jsonContent)
         : jsonContent;
+
+    // 根据时间范围筛选记录
+    if (range !== 'LT') {
+        const now = new Date();
+        let startDate: Date;
+
+        switch (range) {
+            case '4W':
+                // 4周前
+                startDate = new Date(now);
+                startDate.setDate(startDate.getDate() - 28);
+                break;
+            case '6M':
+                // 6个月前
+                startDate = new Date(now);
+                startDate.setMonth(startDate.getMonth() - 6);
+                break;
+            default:
+                startDate = new Date(0); // 不筛选
+        }
+
+        records = records.filter(record => {
+            const recordDate = new Date(record.ts);
+            return recordDate >= startDate;
+        });
+    }
 
     // 用于聚合的 Map
     const artistMap = new Map<string, {

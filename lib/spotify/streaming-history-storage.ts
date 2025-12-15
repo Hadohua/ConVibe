@@ -54,12 +54,13 @@ export async function hasImportedData(): Promise<boolean> {
 }
 
 /**
- * 清除已导入的数据
+ * 清除已导入的数据（包括聚合统计和原始记录）
  */
 export async function clearStreamingStats(): Promise<void> {
     try {
         await AsyncStorage.removeItem(STORAGE_KEY);
-        console.log('Streaming stats cleared');
+        await AsyncStorage.removeItem(RAW_RECORDS_KEY);
+        console.log('Streaming stats and raw records cleared');
     } catch (error) {
         console.error('Failed to clear streaming stats:', error);
         throw error;

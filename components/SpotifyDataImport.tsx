@@ -16,6 +16,7 @@ import {
 } from "../lib/spotify/streaming-history-parser";
 import {
     saveStreamingStats,
+    saveRawStreamingRecords,
     loadStreamingStats,
     clearStreamingStats,
 } from "../lib/spotify/streaming-history-storage";
@@ -151,6 +152,10 @@ export default function SpotifyDataImport({
             // 保存到本地存储
             setProgress("正在保存到本地...");
             await saveStreamingStats(finalStats);
+
+            // 保存原始记录（用于 stats.fm 风格的时间范围筛选）
+            await saveRawStreamingRecords(allRawRecords);
+            console.log(`Saved ${allRawRecords.length} raw records for time filtering`);
 
             // 尝试上传到云端
             if (isCloudSyncAvailable() && userId && allRawRecords.length > 0) {
