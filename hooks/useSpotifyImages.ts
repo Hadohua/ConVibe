@@ -18,7 +18,8 @@ import {
 // Token 存储
 // ============================================
 
-const SPOTIFY_TOKEN_KEY = '@vibe_consensus/spotify_access_token';
+// 使用与 SpotifyConnector 相同的 key
+const SPOTIFY_TOKEN_KEY = 'spotify_oauth_tokens';
 
 /**
  * 获取存储的 Spotify access token
