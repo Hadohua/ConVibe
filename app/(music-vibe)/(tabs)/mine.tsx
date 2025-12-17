@@ -40,11 +40,11 @@ interface SpotifyData {
 
 // 可选流派列表
 const AVAILABLE_GENRES = [
-    { id: "pop", name: "Pop", emoji: "🎤" },
-    { id: "rock", name: "Rock", emoji: "🎸" },
-    { id: "hip-hop", name: "Hip-Hop", emoji: "🎤" },
-    { id: "r&b", name: "R&B", emoji: "🎵" },
-    { id: "electronic", name: "Electronic", emoji: "🎧" },
+    { id: "pop", name: "Pop" },
+    { id: "rock", name: "Rock" },
+    { id: "hip-hop", name: "Hip-Hop" },
+    { id: "r&b", name: "R&B" },
+    { id: "electronic", name: "Electronic" },
 ];
 
 // ============================================
@@ -136,7 +136,7 @@ export default function MineScreen() {
     const handleCopyAddress = async () => {
         if (wallet.account?.address) {
             await Clipboard.setStringAsync(wallet.account.address);
-            Alert.alert("✅ Copied", "Wallet address copied to clipboard");
+            Alert.alert("Copied", "Wallet address copied to clipboard");
         }
     };
 
@@ -200,7 +200,7 @@ export default function MineScreen() {
         >
             {/* 页面标题 */}
             <View style={styles.header}>
-                <Text style={styles.title}>⛏️ My Music Assets</Text>
+                <Text style={styles.title}>My Music Assets</Text>
                 <Text style={styles.subtitle}>
                     Your Web3 music identity hub
                 </Text>
@@ -209,7 +209,6 @@ export default function MineScreen() {
             {/* 钱包信息 */}
             <View style={styles.walletCard}>
                 <View style={styles.walletHeader}>
-                    <Text style={styles.walletEmoji}>💎</Text>
                     <Text style={styles.walletTitle}>Wallet</Text>
                 </View>
                 {wallet.status === "connected" && wallet.account ? (
@@ -241,7 +240,7 @@ export default function MineScreen() {
             {/* 铸造成功提示 */}
             {mintSuccess && (
                 <View style={styles.successCard}>
-                    <Text style={styles.successTitle}>🎉 Congratulations!</Text>
+                    <Text style={styles.successTitle}>Congratulations!</Text>
                     <Text style={styles.successText}>
                         Your music badge has been minted! This SBT is forever bound to your soul.
                     </Text>
@@ -254,14 +253,14 @@ export default function MineScreen() {
             {/* 验证方式选择 */}
             {!isVerified && !mintSuccess && (
                 <View style={styles.verifySection}>
-                    <Text style={styles.verifySectionTitle}>🔐 Verify Your Music</Text>
+                    <Text style={styles.verifySectionTitle}>Verify Your Music</Text>
                     <View style={styles.methodButtons}>
                         <Pressable
                             onPress={() => setVerifyMethod("import")}
                             style={[styles.methodBtn, verifyMethod === "import" && styles.methodBtnActiveImport]}
                         >
                             <Text style={[styles.methodBtnText, verifyMethod === "import" && styles.methodBtnTextActive]}>
-                                📊 Import
+                                Import
                             </Text>
                         </Pressable>
                         <Pressable
@@ -269,7 +268,7 @@ export default function MineScreen() {
                             style={[styles.methodBtn, verifyMethod === "oauth" && styles.methodBtnActive]}
                         >
                             <Text style={[styles.methodBtnText, verifyMethod === "oauth" && styles.methodBtnTextActive]}>
-                                🔗 OAuth
+                                OAuth
                             </Text>
                         </Pressable>
                         <Pressable
@@ -277,7 +276,7 @@ export default function MineScreen() {
                             style={[styles.methodBtn, verifyMethod === "reclaim" && styles.methodBtnActiveReclaim]}
                         >
                             <Text style={[styles.methodBtnText, verifyMethod === "reclaim" && styles.methodBtnTextActive]}>
-                                🔒 Reclaim
+                                Reclaim
                             </Text>
                         </Pressable>
                     </View>
@@ -324,7 +323,7 @@ export default function MineScreen() {
                                     styles.genreBtnText,
                                     selectedGenres.includes(genre.id) && styles.genreBtnTextActive,
                                 ]}>
-                                    {genre.emoji} {genre.name}
+                                    {genre.name}
                                 </Text>
                             </Pressable>
                         ))}
@@ -412,10 +411,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         marginBottom: 12,
-    },
-    walletEmoji: {
-        fontSize: 20,
-        marginRight: 8,
     },
     walletTitle: {
         color: "#ffffff",

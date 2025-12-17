@@ -59,14 +59,9 @@ function formatNumber(num: number): string {
     return num.toLocaleString();
 }
 
-/** 格式化分钟为时:分 */
+/** 格式化分钟 - 全部显示分钟数 */
 function formatMinutes(minutes: number): string {
-    if (minutes >= 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        return `${hours}h ${mins}m`;
-    }
-    return `${minutes}m`;
+    return `${minutes.toLocaleString()} min`;
 }
 
 // ============================================

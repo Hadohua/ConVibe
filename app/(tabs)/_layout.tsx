@@ -14,6 +14,7 @@ import { Tabs, Redirect } from "expo-router";
 import { View, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { AuthBoundary } from "@privy-io/expo";
 import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 
 // ============================================
 // 品牌色常量
@@ -34,16 +35,15 @@ const COLORS = {
 // ============================================
 
 interface TabIconProps {
-    emoji: string;
-    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
     focused: boolean;
     color: string;
 }
 
-function TabIcon({ emoji, focused, color }: TabIconProps) {
+function TabIcon({ icon, focused, color }: TabIconProps) {
     return (
         <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
-            <Text style={[styles.iconText, { color }]}>{emoji}</Text>
+            <Ionicons name={icon} size={24} color={color} />
             {focused && <View style={[styles.glowDot, { backgroundColor: color }]} />}
         </View>
     );
@@ -65,7 +65,7 @@ function FullScreenLoader() {
 function ErrorScreen({ error }: { error: Error }) {
     return (
         <View className="flex-1 items-center justify-center bg-vibe-black px-8">
-            <Text className="text-red-400 text-xl font-bold mb-4">⚠️ 认证错误</Text>
+            <Text className="text-red-400 text-xl font-bold mb-4">Auth Error</Text>
             <Text className="text-gray-400 text-center">{error.message}</Text>
         </View>
     );
@@ -121,13 +121,13 @@ export default function TabLayout() {
                     },
                 }}
             >
-                {/* 主页 Tab */}
+                {/* Home Tab */}
                 <Tabs.Screen
                     name="home"
                     options={{
-                        title: "主页",
+                        title: "Home",
                         tabBarIcon: ({ color, focused }) => (
-                            <TabIcon emoji="🏠" label="主页" focused={focused} color={color} />
+                            <TabIcon icon="home-outline" focused={focused} color={color} />
                         ),
                     }}
                 />
@@ -152,16 +152,15 @@ export default function TabLayout() {
                     }}
                 />
 
-                {/* 个人资料 Tab */}
+                {/* Profile Tab */}
                 <Tabs.Screen
                     name="profile"
                     options={{
-                        title: "我的",
+                        title: "Profile",
                         tabBarActiveTintColor: COLORS.vibeGold,
                         tabBarIcon: ({ color, focused }) => (
                             <TabIcon
-                                emoji="👤"
-                                label="我的"
+                                icon="person-outline"
                                 focused={focused}
                                 color={focused ? COLORS.vibeGold : color}
                             />
@@ -185,9 +184,6 @@ const styles = StyleSheet.create({
     },
     iconContainerActive: {
         transform: [{ scale: 1.1 }],
-    },
-    iconText: {
-        fontSize: 22,
     },
     glowDot: {
         position: "absolute",

@@ -8,12 +8,10 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, ActivityIndicator, Image } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DetailStatsChart, DetailStatsData, DetailType } from "../../../../components/stats/DetailStatsChart";
-import StatCard from "../../../../components/stats/StatCard";
 import {
     type StreamingStats,
     type TrackStats,
@@ -293,7 +291,6 @@ export default function DetailScreen() {
         };
     }, [data, records, stats, itemType, itemIndex]);
 
-    const typeEmoji = itemType === "tracks" ? "🎵" : itemType === "artists" ? "🎤" : "💿";
     const typeLabel = itemType === "tracks" ? "Track" : itemType === "artists" ? "Artist" : "Album";
     const detailType: DetailType = itemType === "tracks" ? "track" : itemType === "artists" ? "artist" : "album";
 
@@ -318,7 +315,6 @@ export default function DetailScreen() {
     if (!data) {
         return (
             <View style={[styles.container, styles.loadingContainer]}>
-                <Text style={styles.emptyEmoji}>😕</Text>
                 <Text style={styles.emptyText}>No data found</Text>
                 <Pressable onPress={handleGoBack} style={styles.backButtonEmpty}>
                     <Text style={styles.backButtonText}>← Go Back</Text>
@@ -343,41 +339,29 @@ export default function DetailScreen() {
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Cover / Hero */}
-                <View style={styles.heroContainer}>
-                    <Image
-                        source={{ uri: getAvatarUrl(data.name) }}
-                        style={styles.heroImage}
-                    />
-                    <LinearGradient
-                        colors={["transparent", "rgba(0,0,0,0.8)", "#09090b"]}
-                        style={styles.heroGradient}
-                    />
-                    <View style={styles.heroContent}>
-                        <Text style={styles.heroEmoji}>{typeEmoji}</Text>
-                        <Text style={styles.heroName}>{data.name}</Text>
-                        <Text style={styles.heroSubtitle}>{data.subtitle}</Text>
-                    </View>
+                {/* Header Info */}
+                <View style={styles.infoHeader}>
+                    <Text style={styles.infoType}>{typeLabel}</Text>
+                    <Text style={styles.infoName}>{data.name}</Text>
+                    <Text style={styles.infoSubtitle}>{data.subtitle}</Text>
                 </View>
 
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
-                    <StatCard
-                        emoji="🎧"
-                        value={data.playCount.toLocaleString()}
-                        label="Total Plays"
-                    />
-                    <StatCard
-                        emoji="⏱️"
-                        value={`${Math.floor(data.totalMinutes / 60)}h ${data.totalMinutes % 60}m`}
-                        label="Time Listened"
-                    />
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{data.playCount.toLocaleString()}</Text>
+                        <Text style={styles.statLabel}>Total Plays</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{data.totalMinutes.toLocaleString()} min</Text>
+                        <Text style={styles.statLabel}>Time Listened</Text>
+                    </View>
                 </View>
 
                 {/* Top Tracks (for artists/albums) */}
                 {data.topTracks && data.topTracks.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>🔥 Top Tracks</Text>
+                        <Text style={styles.sectionTitle}>Top Tracks</Text>
                         {data.topTracks.slice(0, 5).map((track, index) => (
                             <View key={index} style={styles.trackRow}>
                                 <Text style={styles.trackRank}>#{index + 1}</Text>
@@ -390,7 +374,7 @@ export default function DetailScreen() {
 
                 {/* Timeline */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>📅 Timeline</Text>
+                    <Text style={styles.sectionTitle}>Timeline</Text>
                     <View style={styles.timelineCard}>
                         <View style={styles.timelineRow}>
                             <Text style={styles.timelineLabel}>First Listened</Text>
@@ -430,10 +414,6 @@ const styles = StyleSheet.create({
     loadingText: {
         color: "#71717a",
         marginTop: 12,
-    },
-    emptyEmoji: {
-        fontSize: 48,
-        marginBottom: 16,
     },
     emptyText: {
         color: "#71717a",
@@ -481,41 +461,27 @@ const styles = StyleSheet.create({
     content: {
         paddingBottom: 16,
     },
-    heroContainer: {
-        height: 280,
-        marginBottom: 20,
-        position: "relative",
+    infoHeader: {
+        paddingHorizontal: 16,
+        paddingTop: 20,
+        paddingBottom: 16,
     },
-    heroImage: {
-        width: "100%",
-        height: "100%",
-        position: "absolute",
-    },
-    heroGradient: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: 200,
-    },
-    heroContent: {
-        position: "absolute",
-        bottom: 20,
-        left: 16,
-        right: 16,
-    },
-    heroEmoji: {
-        fontSize: 32,
+    infoType: {
+        color: "#1db954",
+        fontSize: 12,
+        fontWeight: "600",
+        textTransform: "uppercase",
+        letterSpacing: 1,
         marginBottom: 8,
     },
-    heroName: {
+    infoName: {
         color: "#ffffff",
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: "700",
-        marginBottom: 4,
+        marginBottom: 6,
     },
-    heroSubtitle: {
-        color: "rgba(255, 255, 255, 0.7)",
+    infoSubtitle: {
+        color: "#a1a1aa",
         fontSize: 16,
     },
     statsGrid: {
@@ -523,6 +489,25 @@ const styles = StyleSheet.create({
         gap: 12,
         marginBottom: 20,
         paddingHorizontal: 16,
+    },
+    statBox: {
+        flex: 1,
+        backgroundColor: "#18181b",
+        borderRadius: 16,
+        padding: 16,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#27272a",
+    },
+    statValue: {
+        color: "#1db954",
+        fontSize: 22,
+        fontWeight: "700",
+        marginBottom: 4,
+    },
+    statLabel: {
+        color: "#71717a",
+        fontSize: 12,
     },
     section: {
         marginBottom: 20,

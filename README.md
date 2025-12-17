@@ -1,4 +1,4 @@
-# 🎵 ConVibe - Web3 泛文化共识超级 DApp
+# ConVibe - Web3 泛文化共识超级 DApp
 
 <div align="center">
 
@@ -9,58 +9,65 @@
 
 **基于零知识证明的身份验证 + 灵魂绑定代币的 Web3 社交应用**
 
-[功能介绍](#-功能特性) · [Music Vibe 模块](#-music-vibe-模块) · [快速开始](#-快速开始) · [技术架构](#-技术架构) · [经济模型](#-cvib-经济模型)
+[功能介绍](#功能特性) · [Music Vibe 模块](#music-vibe-模块) · [快速开始](#快速开始) · [技术架构](#技术架构) · [经济模型](#cvib-经济模型)
 
 </div>
 
 ---
 
-## 🌟 项目简介
+## 项目简介
 
 ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)** 验证用户的链下文化消费数据（如 Spotify 音乐偏好），并铸造为链上 **灵魂绑定代币 (SBT)**，构建可信的用户"灵魂画像"。
 
-### 💡 核心理念
+### 核心理念
 
 > **你的品味即资产** - 你的音乐品味，是你灵魂的一部分。我们让它上链，成为你不可转让的数字身份。
 
 ---
 
-## ✨ 功能特性
+## 功能特性
 
 | 功能 | 描述 |
 |------|------|
-| 🔐 **无感登录** | Google 社交登录，自动创建嵌入式钱包 |
-| 🎵 **三重验证** | OAuth / 数据导入 / Reclaim zkTLS 零知识证明 |
-| 💎 **$CVB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
-| 🏆 **分层 SBT 徽章** | 入门 / 资深 / OG 三级徽章体系 |
-| 📊 **Stats.fm 风格统计** | 自定义时间范围 + 双重排序 (按次数/按时长) |
-| ☁️ **云端实时同步** | Spotify API 增量更新 + JSON 历史导入 |
-| 📋 **钱包管理** | 一键复制钱包地址，查看余额 |
-| 🔥 **共识社区** | 基于徽章的门控内容和投票系统 |
+| **无感登录** | Google 社交登录，自动创建嵌入式钱包 |
+| **三重验证** | OAuth / 数据导入 / Reclaim zkTLS 零知识证明 |
+| **$CVB 代币** | 根据听歌时长获得代币，销毁代币铸造徽章 |
+| **分层 SBT 徽章** | 入门 / 资深 / OG 三级徽章体系 |
+| **Stats.fm 风格统计** | 时间全部以分钟显示 + Ionicons 图标 |
+| **云端实时同步** | Spotify API 增量更新 + JSON 历史导入 |
+| **钱包管理** | 一键复制钱包地址，查看余额 |
+| **共识社区** | 基于徽章的门控内容和投票系统 |
 
 ---
 
-## 🎵 Music Vibe 模块
+## Music Vibe 模块
 
-**v1.2 更新**: Stack + Tabs 嵌套架构，支持左滑返回和动态详情页数据。
+**v1.3 更新**: Stats.fm 风格 UI 重构 - Ionicons 图标、无 Emoji、统一英文命名。
 
 ### 模块入口
 
-从主页点击 **"音乐 Vibe"** 卡片进入，主 App 的 Tab 栏将隐藏。
+从主页点击 **"Music Vibe"** 卡片进入，主 App 的 Tab 栏将隐藏。
 
 ### 三个核心页面
 
-| Tab | 名称 | 功能 |
-|-----|------|------|
-| 🏆 | **Rankings** | Tracks/Artists/Albums 排行榜，无限滚动，点击查看详情 |
-| 📊 | **Stats** | 听歌时长统计，时间范围筛选，云端同步状态 |
-| ⛏️ | **Mine** | Web3 Hub - SBT 徽章、$CVB 余额、铸造入口、验证方法 |
+| Tab | 图标 | 名称 | 功能 |
+|-----|------|------|------|
+| trophy-outline | **Rankings** | Tracks/Artists/Albums 排行榜，Stats.fm 风格列表 |
+| stats-chart-outline | **Stats** | 听歌时长统计，时间范围筛选，云端同步状态 |
+| cube-outline | **Mine** | Web3 Hub - SBT 徽章、$CVB 余额、铸造入口 |
+
+### UI 特点
+
+- **无 Emoji**: 全应用使用 Ionicons 图标替代 emoji
+- **英文命名**: 所有 Vibe Block 使用英文 (Music Vibe, Gaming Vibe...)
+- **分钟显示**: 时间统一显示为分钟 (如 "150 min" 而非 "2h 30m")
+- **Stats.fm 列表**: 排名项显示 "#1", "X min • Y plays • Artist" 格式
 
 ### 导航架构 (Stack + Tabs)
 
 ```
 主页 (Home)
-   └─ 点击 "音乐 Vibe"
+   └─ 点击 "Music Vibe"
        └─ Music Vibe 模块 (Stack 导航)
            ├─ (tabs)/ ──────────── Tabs 导航层
            │   ├─ Rankings
@@ -69,19 +76,14 @@ ConVibe 是一个创新的 Web3 社交 DApp，通过 **零知识证明 (zkTLS)**
            │   └─ Exit → 返回主页
            │
            └─ detail/[type]/[id] ─ Stack 子页面
-               ├─ 动态数据显示 (根据点击项)
+               ├─ 简洁文字标题 (无封面图)
                ├─ 标准 Push 动画
-               └─ 左滑返回列表 ✅
+               └─ 左滑返回列表
 ```
-
-**v1.2 改进**:
-- ✅ **左滑返回**: 详情页支持 iOS 左滑手势返回列表页
-- ✅ **动态数据**: 点击不同歌曲/艺人/专辑，详情页显示对应内容
-- ✅ **无双重 Header**: 详情页不再显示 "Music Vibe" Header
 
 ---
 
-## 💎 $CVB 经济模型
+## $CVB 经济模型
 
 ConVibe 引入 **$CVB (Convibe Token)** 作为平台的核心代币：
 
@@ -107,7 +109,7 @@ ConVibe 引入 **$CVB (Convibe Token)** 作为平台的核心代币：
 
 ---
 
-## 🛠️ 技术架构
+## 技术架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -143,7 +145,7 @@ ConVibe 引入 **$CVB (Convibe Token)** 作为平台的核心代币：
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 前置条件
 
@@ -190,7 +192,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
-## 🔗 智能合约
+## 智能合约
 
 已部署在 **Base Sepolia** 测试网：
 
@@ -258,25 +260,26 @@ ConVibe/
 
 ---
 
-## 🗺️ 未来路线图
+## 未来路线图
 
 | 阶段 | 功能 | 状态 |
 |------|------|------|
-| **Phase 1** | Spotify 音乐验证 + SBT 铸造 | ✅ 已完成 |
-| **Phase 2** | $CVIB 经济模型 | ✅ 已完成 |
-| **Phase 3** | Stats.fm 风格数据展示 + 云端同步 | ✅ 已完成 |
-| **Phase 4** | Music Vibe 独立模块化重构 | ✅ 已完成 |
-| **Phase 5** | 泛文化扩展 (Netflix, Steam, Kindle) | 🔜 规划中 |
+| **Phase 1** | Spotify 音乐验证 + SBT 铸造 | Done |
+| **Phase 2** | $CVIB 经济模型 | Done |
+| **Phase 3** | Stats.fm 风格数据展示 + 云端同步 | Done |
+| **Phase 4** | Music Vibe 独立模块化重构 | Done |
+| **Phase 5** | Stats.fm UI 重构 (Ionicons, 无 Emoji) | Done |
+| **Phase 6** | 泛文化扩展 (Netflix, Steam, Kindle) | Planned |
 
 ---
 
-## 🤝 贡献
+## 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
 ---
 
-## 📄 许可证
+## 许可证
 
 MIT License © 2024 ConVibe
 
@@ -284,7 +287,7 @@ MIT License © 2024 ConVibe
 
 <div align="center">
 
-**Made with ❤️ by ConVibe Team**
+**Made with love by ConVibe Team**
 
 </div>
 

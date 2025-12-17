@@ -13,7 +13,7 @@ import {
     ActivityIndicator, Image, Dimensions
 } from "react-native";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import {
     type StreamingStats,
     type DateRange,
@@ -61,27 +61,21 @@ function getAvatarUrl(name: string, size: number = 200): string {
     return `https://ui-avatars.com/api/?name=${encodedName}&background=random&color=fff&size=${size}&bold=true`;
 }
 
-/** 格式化分钟 */
+/** 格式化分钟 - 全部显示分钟数 */
 function formatMinutes(minutes: number): string {
-    if (minutes >= 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        return `${hours}h ${mins}m`;
-    }
-    return `${minutes}m`;
+    return `${minutes.toLocaleString()} min`;
 }
 
 // ============================================
 // 顶部 Tab 组件
 // ============================================
 
-function TopTab({ type, isActive, onPress, label, emoji }: TopTabProps) {
+function TopTab({ type, isActive, onPress, label }: Omit<TopTabProps, 'emoji'>) {
     return (
         <Pressable
             onPress={onPress}
             style={[styles.topTab, isActive && styles.topTabActive]}
         >
-            <Text style={styles.topTabEmoji}>{emoji}</Text>
             <Text style={[styles.topTabLabel, isActive && styles.topTabLabelActive]}>
                 {label}
             </Text>
@@ -103,10 +97,6 @@ function RankingItemCard({
     type: RankingType;
     onPress: () => void;
 }) {
-    // 根据排名决定样式
-    const isTop3 = item.rank <= 3;
-    const rankColors = ["#fbbf24", "#9ca3af", "#cd7f32"]; // Gold, Silver, Bronze
-
     return (
         <Pressable
             onPress={onPress}
@@ -115,17 +105,12 @@ function RankingItemCard({
                 pressed && styles.rankingItemPressed,
             ]}
         >
-            {/* 排名 */}
+            {/* Rank Number with # prefix */}
             <View style={styles.rankContainer}>
-                <Text style={[
-                    styles.rankNumber,
-                    isTop3 && { color: rankColors[item.rank - 1] }
-                ]}>
-                    {item.rank}
-                </Text>
+                <Text style={styles.rankNumber}>#{item.rank}</Text>
             </View>
 
-            {/* 封面图 - 使用 Spotify API 获取 */}
+            {/* Album/Artist Art */}
             <View style={[
                 styles.coverContainer,
                 type === "artists" && styles.coverContainerRound
@@ -153,24 +138,18 @@ function RankingItemCard({
                 )}
             </View>
 
-            {/* 信息 */}
+            {/* Info: Title + Subtitle (minutes • plays • artist) */}
             <View style={styles.infoContainer}>
                 <Text style={styles.itemName} numberOfLines={1}>
                     {item.name}
                 </Text>
                 <Text style={styles.itemSubtitle} numberOfLines={1}>
-                    {item.subtitle}
+                    {item.totalMinutes} min • {item.playCount} plays • {item.subtitle}
                 </Text>
             </View>
 
-            {/* 播放次数 & 时长 */}
-            <View style={styles.statsContainer}>
-                <Text style={styles.playCount}>{item.playCount}</Text>
-                <Text style={styles.playLabel}>plays</Text>
-            </View>
-
-            {/* 箭头 */}
-            <Text style={styles.arrow}>›</Text>
+            {/* Chevron Arrow */}
+            <Ionicons name="chevron-forward" size={20} color="#71717a" />
         </Pressable>
     );
 }
@@ -309,21 +288,18 @@ export default function RankingsScreen() {
                 isActive={activeType === "tracks"}
                 onPress={() => handleTypeChange("tracks")}
                 label="Tracks"
-                emoji="🎵"
             />
             <TopTab
                 type="artists"
                 isActive={activeType === "artists"}
                 onPress={() => handleTypeChange("artists")}
                 label="Artists"
-                emoji="🎤"
             />
             <TopTab
                 type="albums"
                 isActive={activeType === "albums"}
                 onPress={() => handleTypeChange("albums")}
                 label="Albums"
-                emoji="💿"
             />
         </View>
     ), [activeType, handleTypeChange]);
@@ -340,7 +316,6 @@ export default function RankingsScreen() {
         }
         return (
             <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>📊</Text>
                 <Text style={styles.emptyTitle}>No Data Yet</Text>
                 <Text style={styles.emptyText}>
                     Import your Spotify data in the Stats tab to see your rankings
@@ -398,10 +373,6 @@ const styles = StyleSheet.create({
     topTabActive: {
         backgroundColor: "#27272a",
     },
-    topTabEmoji: {
-        fontSize: 16,
-        marginRight: 6,
-    },
     topTabLabel: {
         color: "#71717a",
         fontSize: 14,
@@ -433,10 +404,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         paddingHorizontal: 32,
-    },
-    emptyEmoji: {
-        fontSize: 48,
-        marginBottom: 16,
     },
     emptyTitle: {
         color: "#ffffff",
@@ -503,23 +470,5 @@ const styles = StyleSheet.create({
     itemSubtitle: {
         color: "#71717a",
         fontSize: 13,
-    },
-    statsContainer: {
-        alignItems: "flex-end",
-        marginRight: 8,
-    },
-    playCount: {
-        color: "#1db954",
-        fontSize: 15,
-        fontWeight: "700",
-    },
-    playLabel: {
-        color: "#71717a",
-        fontSize: 11,
-    },
-    arrow: {
-        color: "#71717a",
-        fontSize: 24,
-        fontWeight: "300",
     },
 });

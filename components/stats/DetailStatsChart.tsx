@@ -118,7 +118,6 @@ function HourlyHeatmap({ distribution }: { distribution: { hour: string; percent
 // ============================================
 
 export function DetailStatsChart({ type, data }: DetailStatsChartProps) {
-    const typeEmoji = type === "track" ? "🎵" : type === "artist" ? "🎤" : "💿";
     const typeLabel = type === "track" ? "Track" : type === "artist" ? "Artist" : "Album";
 
     // 转换月度数据为图表格式
@@ -133,7 +132,7 @@ export function DetailStatsChart({ type, data }: DetailStatsChartProps) {
         <View style={styles.container}>
             {/* 趋势图 */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📈 Monthly Trend</Text>
+                <Text style={styles.sectionTitle}>Monthly Trend</Text>
                 <View style={styles.chartCard}>
                     <MiniBarChart
                         data={chartData}
@@ -145,7 +144,7 @@ export function DetailStatsChart({ type, data }: DetailStatsChartProps) {
 
             {/* 时段分布 */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🕐 Listening Hours</Text>
+                <Text style={styles.sectionTitle}>Listening Hours</Text>
                 <View style={styles.chartCard}>
                     <HourlyHeatmap distribution={data.hourlyDistribution} />
                     <View style={styles.legendRow}>
@@ -161,26 +160,22 @@ export function DetailStatsChart({ type, data }: DetailStatsChartProps) {
 
             {/* 综合统计 */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📊 {typeLabel} Stats</Text>
+                <Text style={styles.sectionTitle}>{typeLabel} Stats</Text>
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statEmoji}>▶️</Text>
                         <Text style={styles.statValue}>{data.totalPlays.toLocaleString()}</Text>
                         <Text style={styles.statLabel}>Total Plays</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={styles.statEmoji}>⏱️</Text>
-                        <Text style={styles.statValue}>{Math.floor(data.totalMinutes / 60)}h</Text>
+                        <Text style={styles.statValue}>{data.totalMinutes.toLocaleString()} min</Text>
                         <Text style={styles.statLabel}>Total Time</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={styles.statEmoji}>📍</Text>
-                        <Text style={styles.statValue}>{data.avgPerSession.toFixed(1)}</Text>
+                        <Text style={styles.statValue}>{data.avgPerSession.toFixed(1)} min</Text>
                         <Text style={styles.statLabel}>Avg/Session</Text>
                     </View>
                     {data.streak && (
                         <View style={styles.statItem}>
-                            <Text style={styles.statEmoji}>🔥</Text>
                             <Text style={styles.statValue}>{data.streak}</Text>
                             <Text style={styles.statLabel}>Day Streak</Text>
                         </View>
@@ -291,10 +286,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 1,
         borderColor: "#27272a",
-    },
-    statEmoji: {
-        fontSize: 20,
-        marginBottom: 8,
     },
     statValue: {
         color: "#1db954",

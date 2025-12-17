@@ -12,6 +12,7 @@ import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 // ============================================
 // 品牌色常量 (Stats.fm 风格)
@@ -33,17 +34,18 @@ const COLORS = {
 // ============================================
 
 interface TabIconProps {
-    emoji: string;
-    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
     focused: boolean;
 }
 
-function TabIcon({ emoji, label, focused }: TabIconProps) {
+function TabIcon({ icon, focused }: TabIconProps) {
     return (
         <View style={styles.tabIconContainer}>
-            <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
-                {emoji}
-            </Text>
+            <Ionicons
+                name={icon}
+                size={24}
+                color={focused ? COLORS.primary : COLORS.textMuted}
+            />
             {focused && <View style={styles.tabIndicator} />}
         </View>
     );
@@ -67,7 +69,6 @@ function MusicVibeHeader() {
             </Pressable>
 
             <View style={styles.headerCenter}>
-                <Text style={styles.headerEmoji}>🎵</Text>
                 <Text style={styles.headerTitle}>Music Vibe</Text>
             </View>
 
@@ -128,11 +129,7 @@ export default function MusicVibeTabsLayout() {
                     options={{
                         title: "Rankings",
                         tabBarIcon: ({ focused }) => (
-                            <TabIcon
-                                emoji="🏆"
-                                label="Rankings"
-                                focused={focused}
-                            />
+                            <TabIcon icon="trophy-outline" focused={focused} />
                         ),
                     }}
                 />
@@ -141,11 +138,7 @@ export default function MusicVibeTabsLayout() {
                     options={{
                         title: "Stats",
                         tabBarIcon: ({ focused }) => (
-                            <TabIcon
-                                emoji="📊"
-                                label="Stats"
-                                focused={focused}
-                            />
+                            <TabIcon icon="stats-chart-outline" focused={focused} />
                         ),
                     }}
                 />
@@ -155,14 +148,11 @@ export default function MusicVibeTabsLayout() {
                         title: "Mine",
                         tabBarActiveTintColor: COLORS.secondary,
                         tabBarIcon: ({ focused }) => (
-                            <TabIcon
-                                emoji="⛏️"
-                                label="Mine"
-                                focused={focused}
-                            />
+                            <TabIcon icon="cube-outline" focused={focused} />
                         ),
                     }}
                 />
+
             </Tabs>
         </View>
     );
@@ -202,10 +192,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
     },
-    headerEmoji: {
-        fontSize: 24,
-        marginRight: 8,
-    },
     headerTitle: {
         color: COLORS.textPrimary,
         fontSize: 18,
@@ -218,14 +204,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingTop: 4,
-    },
-    tabEmoji: {
-        fontSize: 22,
-        opacity: 0.6,
-    },
-    tabEmojiActive: {
-        opacity: 1,
-        transform: [{ scale: 1.1 }],
     },
     tabIndicator: {
         position: "absolute",

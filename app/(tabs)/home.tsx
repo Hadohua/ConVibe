@@ -33,8 +33,8 @@ interface VibeBlock {
 const VIBE_BLOCKS: VibeBlock[] = [
     {
         id: "music",
-        name: "音乐 Vibe",
-        emoji: "🎵",
+        name: "Music Vibe",
+        emoji: "",
         color: "#8b5cf6",
         gradientColors: ["#8b5cf6", "#6366f1"],
         isActive: true,
@@ -42,40 +42,40 @@ const VIBE_BLOCKS: VibeBlock[] = [
     },
     {
         id: "gaming",
-        name: "游戏 Vibe",
-        emoji: "🎮",
+        name: "Gaming Vibe",
+        emoji: "",
         color: "#10b981",
         gradientColors: ["#10b981", "#059669"],
         isActive: false,
     },
     {
         id: "movie",
-        name: "电影 Vibe",
-        emoji: "🎬",
+        name: "Movie Vibe",
+        emoji: "",
         color: "#f59e0b",
         gradientColors: ["#f59e0b", "#d97706"],
         isActive: false,
     },
     {
         id: "fitness",
-        name: "健身 Vibe",
-        emoji: "💪",
+        name: "Fitness Vibe",
+        emoji: "",
         color: "#ef4444",
         gradientColors: ["#ef4444", "#dc2626"],
         isActive: false,
     },
     {
         id: "travel",
-        name: "旅行 Vibe",
-        emoji: "✈️",
+        name: "Travel Vibe",
+        emoji: "",
         color: "#06b6d4",
         gradientColors: ["#06b6d4", "#0891b2"],
         isActive: false,
     },
     {
         id: "food",
-        name: "美食 Vibe",
-        emoji: "🍜",
+        name: "Food Vibe",
+        emoji: "",
         color: "#f97316",
         gradientColors: ["#f97316", "#ea580c"],
         isActive: false,
@@ -86,24 +86,24 @@ const VIBE_BLOCKS: VibeBlock[] = [
 const PLACEHOLDER_FEED = [
     {
         id: "1",
-        title: "🎤 谁是最被低估的说唱歌手？",
+        title: "Who is the most underrated rapper?",
         votes: 128,
         comments: 45,
-        vibe: "音乐 Vibe",
+        vibe: "Music Vibe",
     },
     {
         id: "2",
-        title: "🎸 2024年最佳摇滚专辑投票",
+        title: "Best rock album of 2024 - Vote now",
         votes: 89,
         comments: 32,
-        vibe: "音乐 Vibe",
+        vibe: "Music Vibe",
     },
     {
         id: "3",
-        title: "🎹 古典乐入门推荐榜单共识",
+        title: "Classical music for beginners",
         votes: 67,
         comments: 28,
-        vibe: "音乐 Vibe",
+        vibe: "Music Vibe",
     },
 ];
 
@@ -127,7 +127,6 @@ function VibeBlockCard({ block, onPress }: { block: VibeBlock; onPress: () => vo
                 end={{ x: 1, y: 1 }}
                 style={styles.vibeBlockGradient}
             >
-                <Text style={styles.vibeBlockEmoji}>{block.emoji}</Text>
                 <Text style={[styles.vibeBlockName, !block.isActive && styles.vibeBlockNameInactive]}>
                     {block.name}
                 </Text>
@@ -157,8 +156,8 @@ function FeedCard({ item }: { item: typeof PLACEHOLDER_FEED[0] }) {
             </View>
             <Text style={styles.feedCardTitle}>{item.title}</Text>
             <View style={styles.feedCardStats}>
-                <Text style={styles.feedCardStat}>👍 {item.votes}</Text>
-                <Text style={styles.feedCardStat}>💬 {item.comments}</Text>
+                <Text style={styles.feedCardStat}>{item.votes} votes</Text>
+                <Text style={styles.feedCardStat}>{item.comments} comments</Text>
             </View>
         </View>
     );
@@ -199,14 +198,14 @@ export default function HomeScreen() {
             <View style={styles.content}>
                 {/* 头部 */}
                 <View style={styles.header}>
-                    <Text style={styles.welcomeText}>探索 Vibes 👋</Text>
+                    <Text style={styles.welcomeText}>Explore Vibes</Text>
                     <Text style={styles.titleText}>VibeConsensus</Text>
                 </View>
 
                 {/* Vibe Blocks 网格 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>🌈 Vibe Blocks</Text>
-                    <Text style={styles.sectionSubtitle}>选择你感兴趣的领域社区</Text>
+                    <Text style={styles.sectionTitle}>Vibe Blocks</Text>
+                    <Text style={styles.sectionSubtitle}>Choose your community</Text>
                     <View style={styles.vibeGrid}>
                         {VIBE_BLOCKS.map((block) => (
                             <VibeBlockCard
@@ -220,15 +219,15 @@ export default function HomeScreen() {
 
                 {/* 综合社区 Feed */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>🔥 热门共识</Text>
-                    <Text style={styles.sectionSubtitle}>社区正在讨论的话题</Text>
+                    <Text style={styles.sectionTitle}>Trending</Text>
+                    <Text style={styles.sectionSubtitle}>Hot topics in the community</Text>
                     {PLACEHOLDER_FEED.map((item) => (
                         <FeedCard key={item.id} item={item} />
                     ))}
 
                     {/* 查看更多 */}
                     <Pressable style={styles.viewMoreButton}>
-                        <Text style={styles.viewMoreText}>查看更多热门话题 →</Text>
+                        <Text style={styles.viewMoreText}>View more topics</Text>
                     </Pressable>
                 </View>
 
@@ -294,9 +293,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
         justifyContent: "space-between",
-    },
-    vibeBlockEmoji: {
-        fontSize: 32,
     },
     vibeBlockName: {
         color: "#ffffff",
