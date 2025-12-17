@@ -14,7 +14,8 @@
       "backgroundColor": "#18181b"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.convibe.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +23,8 @@
         "backgroundColor": "#18181b"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.convibe.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
