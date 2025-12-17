@@ -69,6 +69,14 @@ const resolveRequestWithPackageExports = (context, moduleName, platform) => {
         };
     }
 
+    // expo-application - Web 平台使用 shim (解决 bundleId 错误)
+    if (moduleName === "expo-application" && platform === "web") {
+        return {
+            filePath: require.resolve("./lib/expo-application-web-shim.ts"),
+            type: "sourceFile",
+        };
+    }
+
     // 其他包使用默认解析
     return context.resolveRequest(context, moduleName, platform);
 };
