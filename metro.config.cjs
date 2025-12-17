@@ -77,6 +77,14 @@ const resolveRequestWithPackageExports = (context, moduleName, platform) => {
         };
     }
 
+    // expo-secure-store - Web 平台使用 localStorage shim (Privy 认证)
+    if (moduleName === "expo-secure-store" && platform === "web") {
+        return {
+            filePath: require.resolve("./lib/expo-secure-store-web-shim.ts"),
+            type: "sourceFile",
+        };
+    }
+
     // 其他包使用默认解析
     return context.resolveRequest(context, moduleName, platform);
 };
