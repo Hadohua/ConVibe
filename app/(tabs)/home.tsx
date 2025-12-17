@@ -10,7 +10,7 @@ import { useState, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "../../hooks/usePrivyUnified";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BLOCK_SIZE = (SCREEN_WIDTH - 48 - 12) / 2; // 2 columns with padding and gap
@@ -168,8 +168,8 @@ function FeedCard({ item }: { item: typeof PLACEHOLDER_FEED[0] }) {
 // ============================================
 
 export default function HomeScreen() {
-    const { user } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user } = usePrivyUnified();
+    const { wallet } = useEmbeddedWalletUnified();
     const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
 

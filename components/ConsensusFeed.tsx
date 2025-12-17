@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { View, Text, FlatList, RefreshControl, Pressable, ActivityIndicator } from "react-native";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import { useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 import ProposalCard from "./ProposalCard";
 import GatedContentOverlay from "./GatedContentOverlay";
 import { useGatedAccess } from "../hooks/useGatedAccess";
@@ -35,7 +35,7 @@ const DEFAULT_GATED_REQUIRE = {
 // ============================================
 
 export default function ConsensusFeed() {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
     const { checkAccess } = useGatedAccess();
 
     // 频道和提案状态

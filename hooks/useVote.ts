@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import { useEmbeddedWalletUnified } from "./usePrivyUnified";
 import * as Haptics from "expo-haptics";
 import { publicClient, MUSIC_CONSENSUS_SBT_ADDRESS } from "../lib/web3/client";
 import { MusicConsensusSBTAbi } from "../lib/web3/abi";
@@ -54,7 +54,7 @@ export interface UseVoteReturn {
 // ============================================
 
 export function useVote(): UseVoteReturn {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
 
     /**
      * 获取用户所有徽章

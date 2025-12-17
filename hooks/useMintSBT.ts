@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "./usePrivyUnified";
 import { encodeFunctionData, formatEther, parseEther, toHex } from "viem";
 import type { Proof } from "@reclaimprotocol/reactnative-sdk";
 import {
@@ -128,8 +128,8 @@ function transformProofForContract(proof: Proof) {
 // ============================================
 
 export function useMintSBT(): UseMintSBTReturn {
-    const { user } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user } = usePrivyUnified();
+    const wallet = useEmbeddedWalletUnified();
 
     const [status, setStatus] = useState<MintStatus>("idle");
     const [txHash, setTxHash] = useState<string | null>(null);

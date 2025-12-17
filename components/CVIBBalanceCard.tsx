@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from "react-native";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 import { formatEther } from "viem";
 import { publicClient, VIBE_TOKEN_ADDRESS } from "../lib/web3/client";
 import { VibeTokenAbi } from "../lib/web3/abi";
@@ -52,8 +52,8 @@ export default function CVIBBalanceCard({
     claiming = false,
     onClaimPress,
 }: CVIBBalanceCardProps) {
-    const { user } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user } = usePrivyUnified();
+    const wallet = useEmbeddedWalletUnified();
 
     const [balance, setBalance] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);

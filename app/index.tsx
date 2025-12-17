@@ -10,7 +10,7 @@
 import { useEffect } from "react";
 import { View, ActivityIndicator, Text } from "react-native";
 import { useRouter, Redirect } from "expo-router";
-import { usePrivy } from "@privy-io/expo";
+import { usePrivyUnified } from "../hooks/usePrivyUnified";
 
 /**
  * IndexScreen - 入口路由组件
@@ -19,7 +19,7 @@ import { usePrivy } from "@privy-io/expo";
  * 根据 Privy 的认证状态，将用户重定向到正确的页面。
  */
 export default function IndexScreen() {
-    const { isReady, user } = usePrivy();
+    const { isReady, user } = usePrivyUnified();
 
     // Privy 还在初始化，显示加载状态
     if (!isReady) {

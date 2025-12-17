@@ -12,7 +12,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
 import { ReclaimProofRequest, type Proof } from "@reclaimprotocol/reactnative-sdk";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 import {
     getReclaimAppId,
     getReclaimAppSecret,
@@ -182,8 +182,8 @@ export default function SpotifyVerifier({
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Privy hooks
-    const { user } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user } = usePrivyUnified();
+    const wallet = useEmbeddedWalletUnified();
 
     // 获取钱包地址
     const walletAddress = wallet.status === "connected" && wallet.account

@@ -3,35 +3,44 @@
  * 
  * 这是用户进入应用后看到的第一个页面（如果未登录）。
  * 实现了霓虹风格的 UI 和 Google OAuth 登录逻辑。
+ * 
+ * 注意：Web 和 Native 平台使用不同的 Privy SDK
  */
 
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { usePrivy, useLoginWithOAuth } from "@privy-io/expo";
+import { usePrivyUnified, useLoginWithOAuthUnified } from "../hooks/usePrivyUnified";
+
+// Web SDK 的额外导入
+let useLoginWeb: any = null;
+if (Platform.OS === "web") {
+    // 动态导入 Web SDK 的 login hook
+    const webAuth = require("@privy-io/react-auth");
+    useLoginWeb = webAuth.useLogin;
+}
 
 /**
  * LoginScreen - 登录页面组件
  * 
  * 核心逻辑：
- * 1. 使用 useLoginWithOAuth Hook 触发 Google 登录
- * 2. 监听 usePrivy 的 user 状态
+ * 1. 使用统一 hooks 触发登录
+ * 2. 监听用户状态
  * 3. 用户登录成功后自动跳转到主页
  */
 export default function LoginScreen() {
     const router = useRouter();
 
-    // usePrivy Hook - 获取当前用户状态
-    // isReady: Privy SDK 是否初始化完成
-    // user: 当前登录用户，为 null 表示未登录
-    const { isReady, user } = usePrivy();
+    // 统一的 Privy Hook - 获取当前用户状态
+    const { isReady, user } = usePrivyUnified();
 
-    // useLoginWithOAuth Hook - 触发 OAuth 登录流程
-    // login: 调用此函数开始 OAuth 认证
-    // state: 当前登录状态（idle, loading, error, done）
-    const { login, state } = useLoginWithOAuth();
+    // 统一的 OAuth 登录 Hook（仅用于 Native）
+    const { login: nativeLogin, state } = useLoginWithOAuthUnified();
 
-    // 本地 loading 状态，避免重复点击
+    // Web 平台使用 useLogin hook
+    const webLoginHook = Platform.OS === "web" && useLoginWeb ? useLoginWeb() : null;
+
+    // 本地 loading 状态
     const [isLoading, setIsLoading] = useState(false);
 
     /**
@@ -46,26 +55,25 @@ export default function LoginScreen() {
     }, [isReady, user, router]);
 
     /**
-     * 处理 Google 登录
-     * 
-     * 流程：
-     * 1. 调用 login({ provider: 'google' })
-     * 2. Privy SDK 打开 OAuth 认证页面
-     * 3. 用户完成 Google 授权
-     * 4. 回调后 user 状态更新，触发 useEffect 跳转
-     * 
-     * 关于无感钱包创建：
-     * 在 Privy Dashboard 中配置 "Create embedded wallets for users without wallets"
-     * 用户登录后，如果没有外部钱包，Privy 会自动创建一个嵌入式钱包
+     * 处理登录
+     * 根据平台使用不同的登录方式
      */
-    const handleGoogleLogin = async () => {
+    const handleLogin = async () => {
         try {
             setIsLoading(true);
-            // 指定使用 Google 作为 OAuth 提供商
-            await login({ provider: "google" });
+
+            if (Platform.OS === "web") {
+                // Web 平台: 使用 @privy-io/react-auth 的 login
+                // 这会弹出 Privy 的登录模态框
+                if (webLoginHook?.login) {
+                    await webLoginHook.login();
+                }
+            } else {
+                // Native 平台: 使用 @privy-io/expo 的 OAuth 登录
+                await nativeLogin();
+            }
         } catch (error) {
             console.error("登录失败:", error);
-            // 可以在这里添加错误提示 UI
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +107,7 @@ export default function LoginScreen() {
 
             {/* 霓虹风格登录按钮 */}
             <Pressable
-                onPress={handleGoogleLogin}
+                onPress={handleLogin}
                 disabled={isLoginInProgress}
                 className={`
           w-full py-4 px-8 rounded-2xl
@@ -157,3 +165,4 @@ export default function LoginScreen() {
         </View>
     );
 }
+

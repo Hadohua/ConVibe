@@ -13,6 +13,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@privy-io/expo": "^0.61.0",
     "@privy-io/expo-native-extensions": "^0.0.5",
+    "@privy-io/react-auth": "^3.9.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@reclaimprotocol/reactnative-sdk": "^3.0.0",
     "@reclaimprotocol/verifier-solidity-sdk": "^1.0.4",

@@ -11,7 +11,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Linking } from "react-native";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import { useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 import { publicClient, MUSIC_CONSENSUS_SBT_ADDRESS } from "../lib/web3/client";
 import { MusicConsensusSBTAbi } from "../lib/web3/abi";
 import { BadgeSkeleton } from "./ui/Skeleton";
@@ -162,7 +162,7 @@ function BadgeCard({
 // ============================================
 
 export default function UserBadges({ onRefreshNeeded }: UserBadgesProps = {}) {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
     const [badges, setBadges] = useState<BadgeWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

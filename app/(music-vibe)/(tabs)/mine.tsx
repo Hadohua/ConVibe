@@ -10,7 +10,7 @@
 
 import { useState, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from "react-native";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import { useEmbeddedWalletUnified } from "../../../hooks/usePrivyUnified";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import UserBadges from "../../../components/UserBadges";
@@ -52,7 +52,7 @@ const AVAILABLE_GENRES = [
 // ============================================
 
 export default function MineScreen() {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
 
     // 验证状态
     const [verifyMethod, setVerifyMethod] = useState<VerifyMethod>("import");

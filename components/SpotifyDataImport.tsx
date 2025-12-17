@@ -24,7 +24,7 @@ import {
     importJsonRecords,
     isCloudSyncAvailable,
 } from "../lib/spotify/streaming-sync";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 
 // ============================================
 // 类型定义
@@ -45,7 +45,7 @@ export default function SpotifyDataImport({
     onImportComplete,
     onError,
 }: SpotifyDataImportProps) {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
     const [status, setStatus] = useState<ImportStatus>("idle");
     const [stats, setStats] = useState<StreamingStats | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);

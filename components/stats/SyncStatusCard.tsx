@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { usePrivyUnified, useEmbeddedWalletUnified } from "../../hooks/usePrivyUnified";
 import {
     syncRecentPlays,
     isCloudSyncAvailable,
@@ -37,8 +37,8 @@ export default function SyncStatusCard({
     lastSyncAt,
     onSyncComplete,
 }: SyncStatusCardProps) {
-    const { user } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user } = usePrivyUnified();
+    const wallet = useEmbeddedWalletUnified();
     const [syncing, setSyncing] = useState(false);
     const [lastResult, setLastResult] = useState<SyncResult | null>(null);
     const [recordStats, setRecordStats] = useState<{

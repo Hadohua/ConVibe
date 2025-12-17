@@ -12,7 +12,8 @@
 import { View, Text, Pressable, Alert, ScrollView } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { usePrivy, useEmbeddedWallet } from "@privy-io/expo";
+import { Platform } from "react-native";
+import { usePrivyUnified, useEmbeddedWalletUnified, useLogoutUnified } from "../../hooks/usePrivyUnified";
 import { SkeletonText, SkeletonCard } from "../../components/ui/Skeleton";
 
 /**
@@ -20,8 +21,9 @@ import { SkeletonText, SkeletonCard } from "../../components/ui/Skeleton";
  */
 export default function ProfileScreen() {
     const router = useRouter();
-    const { user, logout, isReady } = usePrivy();
-    const wallet = useEmbeddedWallet();
+    const { user, isReady } = usePrivyUnified();
+    const { wallet } = useEmbeddedWalletUnified();
+    const { logout } = useLogoutUnified();
 
     /**
      * 处理登出
@@ -53,14 +55,17 @@ export default function ProfileScreen() {
      * 复制钱包地址
      */
     const handleCopyAddress = async () => {
-        if (wallet.account?.address) {
-            await Clipboard.setStringAsync(wallet.account.address);
+        const address = Platform.OS === "web"
+            ? (wallet as any).address
+            : (wallet as any).account?.address;
+        if (address) {
+            await Clipboard.setStringAsync(address);
             Alert.alert("✅ 已复制", "钱包地址已复制到剪贴板");
         }
     };
 
-    // 获取所有关联账户
-    const linkedAccounts = (user?.linked_accounts || []) as unknown as Array<{
+    // 获取所有关联账户 - Web 和 Native 的 user 结构不同
+    const linkedAccounts = ((user as any)?.linked_accounts || (user as any)?.linkedAccounts || []) as Array<{
         type: string;
         email?: string;
     }>;
@@ -112,7 +117,7 @@ export default function ProfileScreen() {
                         <Text className="text-white text-lg font-semibold">钱包信息</Text>
                     </View>
 
-                    {wallet.status === "connected" && wallet.account ? (
+                    {wallet.status === "connected" && (Platform.OS === "web" ? (wallet as any).address : (wallet as any).account?.address) ? (
                         <View>
                             <View className="flex-row justify-between items-center mb-3">
                                 <Text className="text-gray-400 text-sm">类型</Text>
@@ -126,7 +131,7 @@ export default function ProfileScreen() {
                                 <View className="flex-row items-center">
                                     <View className="bg-dark-50 rounded-lg p-3 flex-1">
                                         <Text className="text-vibe-purple font-mono text-xs">
-                                            {wallet.account.address}
+                                            {Platform.OS === "web" ? (wallet as any).address : (wallet as any).account?.address}
                                         </Text>
                                     </View>
                                     <Pressable

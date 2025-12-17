@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { useEmbeddedWallet } from "@privy-io/expo";
+import { useEmbeddedWalletUnified } from "./usePrivyUnified";
 import { publicClient, MUSIC_CONSENSUS_SBT_ADDRESS } from "../lib/web3/client";
 import { MusicConsensusSBTAbi } from "../lib/web3/abi";
 
@@ -42,7 +42,7 @@ export interface UseGatedAccessReturn {
 // ============================================
 
 export function useGatedAccess(): UseGatedAccessReturn {
-    const wallet = useEmbeddedWallet();
+    const wallet = useEmbeddedWalletUnified();
     const [loading, setLoading] = useState(false);
 
     /**
