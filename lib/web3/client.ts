@@ -12,7 +12,7 @@ import { baseSepolia } from "viem/chains";
 // ============================================
 
 /** 合约地址 - V4 版本 (支持 $CVIB 铸造) */
-export const MUSIC_CONSENSUS_SBT_ADDRESS = "0x25e3af27cc14d260f0e7199a1a06802d81e0b75f" as const;
+export const MUSIC_CONSENSUS_SBT_ADDRESS = "0x1f60a02b3ffa0876776d2a7dd02a550e1105d493" as const;
 
 /** VibeToken ($CVIB) 合约地址 - Base Sepolia */
 export const VIBE_TOKEN_ADDRESS = "0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074" as const;

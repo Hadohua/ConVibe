@@ -13,6 +13,7 @@ import hre from "hardhat";
 import { createWalletClient, createPublicClient, http, formatEther, encodeAbiParameters, parseAbiParameters } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
+import "dotenv/config";
 
 async function main() {
     console.log("🚀 Deploying MusicConsensusSBTV4 to Base Sepolia...\n");

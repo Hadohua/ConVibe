@@ -199,7 +199,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 | 合约 | 地址 | 功能 |
 |------|------|------|
 | **VibeToken ($CVB)** | `0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074` | ERC-20 代币 |
-| **MusicConsensusSBT V4** | `0x25e3af27cc14d260f0e7199a1a06802d81e0b75f` | SBT 徽章 + $CVB 铸造 |
+| **MusicConsensusSBT V4** | `0x1f60a02b3ffa0876776d2a7dd02a550e1105d493` | SBT 徽章 + $CVB 铸造 |
 
 ### 合约功能
 

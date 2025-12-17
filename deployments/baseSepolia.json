@@ -1,9 +1,10 @@
 {
   "network": "baseSepolia",
   "chainId": 84532,
-  "address": "0x25e3af27cc14d260f0e7199a1a06802d81e0b75f",
+  "address": "0x1f60a02b3ffa0876776d2a7dd02a550e1105d493",
   "version": "V4",
   "vibeTokenAddress": "0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074",
   "deployer": "0xCB83b146561bf502C80f338a4ef79c8cF2e738B3",
-  "timestamp": "2025-12-10T10:54:00.000Z"
+  "timestamp": "2025-12-17T03:55:00.000Z",
+  "txHash": "0x0b5c2c513c0605132f080eced0a5a1e4e2444da2eaa1a590631beb862fa7c2eb"
 }

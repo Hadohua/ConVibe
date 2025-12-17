@@ -18,7 +18,7 @@ import { baseSepolia } from "viem/chains";
 
 // Contract addresses (deployed)
 const VIBE_TOKEN_ADDRESS = "0x659b53fdf2b7a0ab4cc71d39b61b02c41245d074";
-const SBT_V4_ADDRESS = "0x25e3af27cc14d260f0e7199a1a06802d81e0b75f";
+const SBT_V4_ADDRESS = "0x1f60a02b3ffa0876776d2a7dd02a550e1105d493";
 
 // ABIs (minimal for testing)
 const VibeTokenAbi = [
