@@ -24,7 +24,14 @@ interface PrivyProviderWebProps {
 export function PrivyProviderWeb({ children }: PrivyProviderWebProps) {
     const appId = getPrivyAppId();
 
+    // 调试：在控制台输出 appId 状态
+    console.log("[PrivyProviderWeb] App ID:", appId ? `${appId.substring(0, 8)}...` : "MISSING");
+    console.log("[PrivyProviderWeb] process.env.EXPO_PUBLIC_PRIVY_APP_ID:", process.env.EXPO_PUBLIC_PRIVY_APP_ID);
+
     if (!appId) {
+        console.error("[PrivyProviderWeb] EXPO_PUBLIC_PRIVY_APP_ID is not set!");
+        // 仍然包裹 PrivyProvider，使用备用 appId（这会失败但至少不会让 hooks 报错）
+        // 注意：这只是为了调试，生产环境必须有正确的 appId
         return <>{children}</>;
     }
 

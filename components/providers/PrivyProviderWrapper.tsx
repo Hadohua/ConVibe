@@ -21,7 +21,14 @@ interface PrivyProviderWrapperProps {
 export function PrivyProviderWrapper({ children }: PrivyProviderWrapperProps) {
     const appId = getPrivyAppId();
 
+    // 调试：在控制台输出 appId 状态
+    console.log("[PrivyProviderWrapper] App ID:", appId ? `${appId.substring(0, 8)}...` : "MISSING");
+    console.log("[PrivyProviderWrapper] process.env:", {
+        EXPO_PUBLIC_PRIVY_APP_ID: process.env.EXPO_PUBLIC_PRIVY_APP_ID,
+    });
+
     if (!appId) {
+        console.error("[PrivyProviderWrapper] EXPO_PUBLIC_PRIVY_APP_ID is not set!");
         return (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0a0a0f", padding: 32 }}>
                 <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", marginBottom: 16 }}>
