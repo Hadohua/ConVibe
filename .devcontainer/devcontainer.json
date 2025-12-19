@@ -1,0 +1,43 @@
+{
+    "name": "Vibe Consensus Web Dev",
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+    "features": {
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "forwardPorts": [
+        8081,
+        19006
+    ],
+    "portsAttributes": {
+        "8081": {
+            "label": "Metro Bundler",
+            "onAutoForward": "notify"
+        },
+        "19006": {
+            "label": "Expo Web",
+            "onAutoForward": "openBrowser"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "bradlc.vscode-tailwindcss",
+                "JuanBlanco.solidity",
+                "NomicFoundation.hardhat-solidity"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "esbenp.prettier-vscode"
+            }
+        }
+    },
+    "postCreateCommand": "npm install",
+    "remoteEnv": {
+        "EXPO_PUBLIC_PRIVY_APP_ID": "${localEnv:EXPO_PUBLIC_PRIVY_APP_ID}",
+        "EXPO_PUBLIC_PRIVY_CLIENT_ID": "${localEnv:EXPO_PUBLIC_PRIVY_CLIENT_ID}",
+        "EXPO_PUBLIC_SUPABASE_URL": "${localEnv:EXPO_PUBLIC_SUPABASE_URL}",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${localEnv:EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+    }
+}
