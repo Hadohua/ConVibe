@@ -45,16 +45,26 @@ export const privyConfig: PrivyConfig = {
  * 注意：虽然 App ID 在客户端可见，但这是安全的，因为：
  * 1. App ID 本身不是密钥
  * 2. 真正的认证发生在 Privy 服务器端
+ * 
+ * 备注：由于 Vercel 构建时环境变量可能未正确嵌入，添加硬编码 fallback
  */
+
+// 硬编码 fallback（仅在环境变量不可用时使用）
+const PRIVY_APP_ID_FALLBACK = "cmiw0zjp203uol00chb6zvrzi";
+
 export const getPrivyAppId = (): string => {
     const appId = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
+
+    // 调试日志
+    console.log("[getPrivyAppId] env value:", appId);
+    console.log("[getPrivyAppId] fallback value:", PRIVY_APP_ID_FALLBACK);
+
     if (!appId) {
         console.warn(
-            '⚠️ EXPO_PUBLIC_PRIVY_APP_ID 未设置！\n' +
-            '请在 .env 文件中配置 Privy App ID。\n' +
-            '获取方式：https://dashboard.privy.io -> Settings'
+            '⚠️ EXPO_PUBLIC_PRIVY_APP_ID 未设置，使用 fallback 值\n' +
+            '请在 Vercel 环境变量中配置正确的值。'
         );
-        return '';
+        return PRIVY_APP_ID_FALLBACK;
     }
     return appId;
 };
