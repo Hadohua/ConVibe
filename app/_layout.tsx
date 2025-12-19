@@ -12,8 +12,12 @@ import "../global.css";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { View, Platform } from "react-native";
 import { PrivyProviderWrapper } from "../components/providers/PrivyProviderWrapper";
+
+// 调试日志 - 确认 _layout.tsx 正在执行
+console.log("[_layout.tsx] Loading...");
+console.log("[_layout.tsx] Platform:", Platform.OS);
 
 /**
  * RootLayout - 根布局组件
