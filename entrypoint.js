@@ -13,6 +13,8 @@
  * React Native 默认没有这些浏览器 API，所以需要 polyfill 补丁。
  */
 
+console.log('[entrypoint.js] Starting application...');
+
 // 0. Buffer polyfill - viem 需要 Buffer 支持
 import { Buffer } from 'buffer';
 global.Buffer = Buffer;
