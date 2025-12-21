@@ -85,6 +85,22 @@ const resolveRequestWithPackageExports = (context, moduleName, platform) => {
         };
     }
 
+    // @solana-program/* - Privy 的可选 Solana 依赖，使用空 shim
+    if (moduleName.startsWith("@solana-program/") && platform === "web") {
+        return {
+            filePath: require.resolve("./lib/solana-web-shim.ts"),
+            type: "sourceFile",
+        };
+    }
+
+    // @solana/* - 其他 Solana 相关包
+    if (moduleName.startsWith("@solana/") && platform === "web") {
+        return {
+            filePath: require.resolve("./lib/solana-web-shim.ts"),
+            type: "sourceFile",
+        };
+    }
+
     // 其他包使用默认解析
     return context.resolveRequest(context, moduleName, platform);
 };
