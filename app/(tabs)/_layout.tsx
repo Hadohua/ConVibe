@@ -12,7 +12,7 @@
 
 import { Tabs, Redirect } from "expo-router";
 import { View, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
-import { AuthBoundary } from "@privy-io/expo";
+import { AuthBoundaryUnified } from "../../components/providers/AuthBoundaryUnified";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -93,9 +93,9 @@ function TabBarBackground() {
 
 export default function TabLayout() {
     return (
-        <AuthBoundary
+        <AuthBoundaryUnified
             loading={<FullScreenLoader />}
-            error={(error) => <ErrorScreen error={error} />}
+            error={(error: Error) => <ErrorScreen error={error} />}
             unauthenticated={<Redirect href="/login" />}
         >
             <Tabs
@@ -168,7 +168,7 @@ export default function TabLayout() {
                     }}
                 />
             </Tabs>
-        </AuthBoundary>
+        </AuthBoundaryUnified>
     );
 }
 

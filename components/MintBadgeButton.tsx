@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
-import type { Proof } from "@reclaimprotocol/reactnative-sdk";
+import type { Proof } from "../lib/reclaim-web-shim";
 import { useMintSBT } from "../hooks/useMintSBT";
 import { TIER, getTierInfo, CVIB_TIER_COST, type TierLevel } from "../lib/consensus/tier-calculator";
 

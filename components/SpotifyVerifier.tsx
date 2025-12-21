@@ -11,7 +11,7 @@
 
 import { useState, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native";
-import { ReclaimProofRequest, type Proof } from "@reclaimprotocol/reactnative-sdk";
+import { ReclaimProofRequest, type Proof } from "../lib/reclaim-web-shim";
 import { usePrivyUnified, useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
 import {
     getReclaimAppId,

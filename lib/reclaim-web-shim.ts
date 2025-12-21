@@ -6,10 +6,16 @@
  */
 
 export interface Proof {
+    identifier?: string;
     claimData?: {
+        provider?: string;
         context?: string;
         parameters?: string;
+        owner?: string;
+        timestampS?: number;
+        epoch?: number;
     };
+    signatures?: string[];
 }
 
 export class ReclaimProofRequest {

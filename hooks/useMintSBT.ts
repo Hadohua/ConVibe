@@ -15,7 +15,7 @@
 import { useState, useCallback } from "react";
 import { usePrivyUnified, useEmbeddedWalletUnified } from "./usePrivyUnified";
 import { encodeFunctionData, formatEther, parseEther, toHex } from "viem";
-import type { Proof } from "@reclaimprotocol/reactnative-sdk";
+import type { Proof } from "../lib/reclaim-web-shim";
 import {
     publicClient,
     MUSIC_CONSENSUS_SBT_ADDRESS,
