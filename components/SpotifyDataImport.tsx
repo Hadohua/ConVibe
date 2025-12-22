@@ -6,8 +6,9 @@
  */
 
 import { useState, useCallback } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+// Web 平台使用 fetch，Native 使用 expo-file-system
 import * as FileSystem from "expo-file-system/legacy";
 import {
     parseStreamingHistory,
@@ -25,6 +26,22 @@ import {
     isCloudSyncAvailable,
 } from "../lib/spotify/streaming-sync";
 import { usePrivyUnified, useEmbeddedWalletUnified } from "../hooks/usePrivyUnified";
+
+/**
+ * 跨平台读取文件内容
+ * Web: 使用 fetch API
+ * Native: 使用 expo-file-system
+ */
+async function readFileContent(uri: string): Promise<string> {
+    if (Platform.OS === "web") {
+        // Web 平台: 使用 fetch API 读取 blob URL
+        const response = await fetch(uri);
+        return await response.text();
+    } else {
+        // Native 平台: 使用 expo-file-system
+        return await FileSystem.readAsStringAsync(uri);
+    }
+}
 
 // ============================================
 // 类型定义
@@ -102,8 +119,8 @@ export default function SpotifyDataImport({
                 const asset = result.assets[i];
                 setProgress(`正在解析 ${asset.name} (${i + 1}/${result.assets.length})...`);
 
-                // 读取文件内容
-                const content = await FileSystem.readAsStringAsync(asset.uri);
+                // 读取文件内容（跨平台兼容）
+                const content = await readFileContent(asset.uri);
 
                 // 保存原始记录用于云端上传
                 const rawRecords: StreamingRecord[] = JSON.parse(content);
