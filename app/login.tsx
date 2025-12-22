@@ -75,15 +75,13 @@ export default function LoginScreen() {
                 className={`
           w-full py-4 px-8 rounded-2xl
           ${isLoading ? "bg-gray-700" : "bg-primary-600"}
-          shadow-lg
         `}
                 style={({ pressed }) => [
                     {
-                        shadowColor: "#9333ea",
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: pressed ? 0.8 : 0.5,
-                        shadowRadius: pressed ? 20 : 15,
-                        elevation: 10,
+                        // Web 兼容的阴影样式
+                        boxShadow: pressed
+                            ? "0 0 20px rgba(147, 51, 234, 0.8)"
+                            : "0 0 15px rgba(147, 51, 234, 0.5)",
                         transform: [{ scale: pressed ? 0.98 : 1 }],
                     },
                 ]}
