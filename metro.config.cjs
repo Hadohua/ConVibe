@@ -61,6 +61,27 @@ const resolveRequestWithPackageExports = (context, moduleName, platform) => {
         return ctx.resolveRequest(ctx, moduleName, platform);
     }
 
+    // libphonenumber-js - Privy 的依赖，必须启用 package exports
+    // 否则会出现 "Cannot read properties of undefined (reading 'v1')" 错误
+    if (moduleName.startsWith("libphonenumber-js")) {
+        const ctx = {
+            ...context,
+            unstable_enablePackageExports: true,
+        };
+        return ctx.resolveRequest(ctx, moduleName, platform);
+    }
+
+    // uuid - Privy SDK 依赖，使用 browser 版本
+    // wrapper.mjs 在 Node ESM 模式下有问题，使用 browser 版本绕过
+    if (moduleName === "uuid" || moduleName.startsWith("uuid/")) {
+        const ctx = {
+            ...context,
+            unstable_enablePackageExports: true,
+            unstable_conditionNames: ["browser", "import", "require"],
+        };
+        return ctx.resolveRequest(ctx, moduleName, platform);
+    }
+
     // @reclaimprotocol/reactnative-sdk - Web 平台使用 shim
     if (moduleName === "@reclaimprotocol/reactnative-sdk" && platform === "web") {
         return {
